@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  shipwar-server:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: shipwar-server
+    ports: 
+      - "8765:8765"
+    restart: unless-stopped
