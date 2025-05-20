@@ -99,7 +99,7 @@ async def handle_server():
         print("waiting for enemy's turn")
         reply = json.loads(await ws_connection.recv())
         if reply["type"] == "enemy_guess_result":
-            enemy_guessed_squares[row][col] = reply["result"]
+            enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
         else: 
             display_error_box(f"Server Error {str(e)}")
     while True:
@@ -108,22 +108,22 @@ async def handle_server():
                 await ws_connection.send(json.dumps({
                     "type":"guess", 
                     "position": [guess[0], guess[1]]}))
-       	    except Exception as e:
-       	        display_error_box(f"Failed to send guess: {str(e)}")
-        	
-       	    reply = json.loads(await ws_connection.recv())
-       	    if reply["type"] == "guess_result":
-       	        user_guessed_squares[guess[0]][guess[1]] = reply["result"]
-       	    else: 
-       	        display_error_box(f"Server Error {str(e)}")
+            except Exception as e:
+                display_error_box(f"Failed to send guess: {str(e)}")
+            
+            reply = json.loads(await ws_connection.recv())
+            if reply["type"] == "guess_result":
+                user_guessed_squares[guess[0]][guess[1]] = reply["result"]
+            else: 
+                display_error_box(f"Server Error {str(e)}")
        	    
             guess = False
-       	    
-       	    #reply = json.loads(await ws_connection.recv())
-       	    #if reply["type"] == "enemy_guess_result":
-       	    #    enemy_guessed_squares[row][col] = reply["result"]
-       	    #else: 
-    	    #    display_error_box(f"Server Error {str(e)}")
+            
+            # reply = json.loads(await ws_connection.recv())
+            # if reply["type"] == "enemy_guess_result":
+            #     enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+            # else: 
+            #     display_error_box(f"Server Error {str(e)}")
 
 def start_async_server_handling():
     asyncio.run(handle_server())
