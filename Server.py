@@ -6,9 +6,10 @@ import websockets.asyncio.server
 
 DEFAULT_PORT = 8765
 MAX_PLAYERS = 2
-connected_clients : list[websockets.ServerConnection] = []
+connected_clients : list[websockets.asyncio.server.ServerConnection] = []
 
-async def handle_client(socket : websockets.ServerConnection):
+async def handle_client(socket : websockets.asyncio.server.ServerConnection):
+    print("hendeling client")
     global connected_clients
 
     if len(connected_clients) >= MAX_PLAYERS:
@@ -18,19 +19,18 @@ async def handle_client(socket : websockets.ServerConnection):
     connected_clients += [socket]
     player_id = len(connected_clients)
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
+    print("sent welcome")
 
     try:
         while True:
             message = await socket.recv()
             data = json.loads(message)
-
-            for client in connected_clients:
-                if client != socket:
-                    await client.send(json.dumps({
-                        "type": "forward",
-                        "from": player_id,
-                        "payload": data
-                    }))
+            
+            if data["type"] == "guess":
+                if data["position"] in [[i, i] for i in range(9)]:
+                    await socket.send(json.dumps({"type": "guess_result", "result": 2}))
+                else: await socket.send(json.dumps({"type": "guess_result", "result": 1}))
+                
     except websockets.exceptions.ConnectionClosed as e:
         print(f"Player {player_id} disconnected")
         connected_clients.remove(socket)

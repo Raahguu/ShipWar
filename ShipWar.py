@@ -2,39 +2,12 @@
 import pygame
 import textwrap
 import string
+import threading
+import asyncio
+import websockets
+import json
+import time
 
-#Define Classes
-class Ship(pygame.sprite.Sprite):
-    def __init__(self, sprite_group : pygame.sprite.Group, image_path : str, x : int = 0, y : int = 0):
-        super().__init__()
-        self.sprite_group = sprite_group
-        sprite_group.add(self)
-
-        self.image_path = image_path
-
-        try:
-            self.image = pygame.image.load(image_path).convert_alpha()
-        except Exception as e:
-            display_error_box(str(e))
-            raise e
-        
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-    
-    def scale(self, x = 1, y = 1):
-        self.image = pygame.transform.scale(self.image, (int(self.image.get_width() * x), int(self.image.get_height() * y)))
-
-def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
-    current_size = current_size if current_size else __SCREEN.get_size()
-    min_size = min_size if min_size else base_size / 3
-    max_size = max_size if max_size else base_size * 3
-    scale_factor = min(current_size[0] / scale_reference[0], current_size[1] / scale_reference[1])
-    scaled_size = min(max(min_size, base_size * scale_factor), max_size)
-    if type(base_size) is int: return round(scaled_size)
-    else: return scaled_size
-
-#Define funcs
 def display_error_box(message : str) -> None:
     pygame.font.init()
     font = pygame.font.Font(None, get_scaled_size(24))
@@ -88,6 +61,7 @@ def display_error_box(message : str) -> None:
                 elif event.button == 5:  # Scroll down
                     scroll_offset = min(scroll_offset + scroll_speed, max_scroll)
                 elif button_rect.collidepoint(event.pos):
+                    pygame.quit()
                     return
 
         pygame.draw.rect(__SCREEN, (200, 0, 0), (box_x, box_y, box_width, box_height))
@@ -112,9 +86,58 @@ def display_error_box(message : str) -> None:
 
         pygame.display.update()
 
-def guess_square(row : int, col : int) -> None:
-    #TODO: Will send post to API server, to let the server know of the users move
-    user_guessed_squares[row][col] = 1
+#Server connection logic
+async def handle_server():
+    global guess
+    try:
+        ws_connection = await websockets.connect(server_uri + ":" + server_port)
+        reply = json.loads(await ws_connection.recv())
+        print(reply)
+    except Exception as e:
+        display_error_box(f"Could not connect to server: {str(e)}")
+    if reply["type"] == "welcome" and reply["player"] != 1:
+        print("waiting for enemy's turn")
+        reply = json.loads(await ws_connection.recv())
+        if reply["type"] == "enemy_guess_result":
+            enemy_guessed_squares[row][col] = reply["result"]
+        else: 
+            display_error_box(f"Server Error {str(e)}")
+    while True:
+        if guess:
+            try:
+                await ws_connection.send(json.dumps({
+                    "type":"guess", 
+                    "position": [guess[0], guess[1]]}))
+       	    except Exception as e:
+       	        display_error_box(f"Failed to send guess: {str(e)}")
+        	
+       	    reply = json.loads(await ws_connection.recv())
+       	    if reply["type"] == "guess_result":
+       	        user_guessed_squares[guess[0]][guess[1]] = reply["result"]
+       	    else: 
+       	        display_error_box(f"Server Error {str(e)}")
+       	    
+            guess = False
+       	    
+       	    #reply = json.loads(await ws_connection.recv())
+       	    #if reply["type"] == "enemy_guess_result":
+       	    #    enemy_guessed_squares[row][col] = reply["result"]
+       	    #else: 
+    	    #    display_error_box(f"Server Error {str(e)}")
+
+def start_async_server_handling():
+    asyncio.run(handle_server())
+        	
+#Client logic
+def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
+    current_size = current_size if current_size else __SCREEN.get_size()
+    min_size = min_size if min_size else base_size / 3
+    max_size = max_size if max_size else base_size * 3
+    scale_factor = min(current_size[0] / scale_reference[0], current_size[1] / scale_reference[1])
+    scaled_size = min(max(min_size, base_size * scale_factor), max_size)
+    if type(base_size) is int: return round(scaled_size)
+    else: return scaled_size
+
 
 def draw_game_board() -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect]:
     pygame.font.init()
@@ -199,6 +222,8 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
 #main game loop
 def main() -> None:
     global __SCREEN
+    global guess
+    
     running = True
     #Window setup
     pygame.display.set_caption("ShipWar")
@@ -239,10 +264,20 @@ def main() -> None:
                             last_guess = [row, col]
                             user_guessed_squares[row][col] = 4
                 if last_guess and guess_button.collidepoint(event.pos):
-                    guess_square(last_guess[0], last_guess[1])
+                    guess = [last_guess[0], last_guess[1]]
                     last_guess = []
 
 if __name__ == "__main__":
+    global server_uri
+    global server_port
+    global player_id
+    global guess
+    
+    server_uri = "ws://0.0.0.0"
+    server_port = "8765"
+    player_id = 0
+    guess = False
+
     pygame.init()
     
     global __SCREEN
@@ -256,8 +291,8 @@ if __name__ == "__main__":
     enemy_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
 
     try:
+        threading.Thread(target=start_async_server_handling, daemon=True).start()
         main()
     except Exception as e: 
         display_error_box(str(e))
-        raise e
     pygame.quit()

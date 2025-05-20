@@ -1,10 +1,10 @@
 FROM python:alpine
 
 WORKDIR /app
-COPY server.py .
+COPY Server.py .
 
 RUN pip install websockets
 
 EXPOSE 8765
 
-CMD ["python", "server.py"]
+CMD ["python", "Server.py"]

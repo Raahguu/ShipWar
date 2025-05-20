@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   shipwar-server:
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: Dockerfile
     container_name: shipwar-server
     ports: 
       - "8765:8765"
