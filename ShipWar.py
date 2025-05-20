@@ -25,16 +25,17 @@ class Ship(pygame.sprite.Sprite):
     def scale(self, x = 1, y = 1):
         self.image = pygame.transform.scale(self.image, (int(self.image.get_width() * x), int(self.image.get_height() * y)))
 
-def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None):
+def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
     current_size = current_size if current_size else __SCREEN.get_size()
     min_size = min_size if min_size else base_size / 3
     max_size = max_size if max_size else base_size * 3
     scale_factor = min(current_size[0] / scale_reference[0], current_size[1] / scale_reference[1])
     scaled_size = min(max(min_size, base_size * scale_factor), max_size)
-    return round(scaled_size)
+    if type(base_size) is int: return round(scaled_size)
+    else: return scaled_size
 
 #Define funcs
-def display_error_box(message : str):
+def display_error_box(message : str) -> None:
     pygame.font.init()
     font = pygame.font.Font(None, get_scaled_size(24))
     screen_width, screen_height = __SCREEN.get_size()
@@ -111,11 +112,11 @@ def display_error_box(message : str):
 
         pygame.display.update()
 
-def guess_square(row : int, col : int):
+def guess_square(row : int, col : int) -> None:
     #TODO: Will send post to API server, to let the server know of the users move
     user_guessed_squares[row][col] = 1
 
-def draw_game_board():
+def draw_game_board() -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect]:
     pygame.font.init()
     font = pygame.font.Font(None, get_scaled_size(24))
     padding = get_scaled_size(50)
@@ -129,7 +130,8 @@ def draw_game_board():
 
     return radar_buttons, guess_button
 
-def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, padding=0, interactable=False, guessed=None):
+def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, padding=0, 
+              interactable=False, guessed=None) -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect] | None:
     if not font: pygame.font.Font(None, get_scaled_size(24))
 
     x_offset, y_offset = LEFT_TOP
@@ -193,10 +195,9 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
 
     if interactable:
         return buttons, guess_button
-            
 
 #main game loop
-def main():
+def main() -> None:
     global __SCREEN
     running = True
     #Window setup
