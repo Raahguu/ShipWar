@@ -34,5 +34,6 @@ docker compose down
 ```
 
 ## Future
-I hope to in the future, allow spectators to watch a match, and allow for servers to be hosted locally on ones device rather than in a docker container.
-This will not be supporting `MacOS`, or and `IOS` of any kind, if you want to figure out how to set it up for that, good luck. 
+I hope to in the future, allow spectators to watch a match, and allow for servers to be hosted locally on one's device rather than in a docker container.
+
+This will not be supporting `MacOS`, or an `IOS` of any kind, if you want to figure out how to set it up for that, good luck. 
