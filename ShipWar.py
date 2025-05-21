@@ -4,9 +4,36 @@ import textwrap
 import string
 import threading
 import asyncio
+import pygame.event
 import websockets
 import json
-import time
+
+def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
+    global __SCREEN
+    current_size = current_size if current_size else __SCREEN.get_size()
+    min_size = min_size if min_size else base_size / 3
+    max_size = max_size if max_size else base_size * 3
+    scale_factor = min(current_size[0] / scale_reference[0], current_size[1] / scale_reference[1])
+    scaled_size = min(max(min_size, base_size * scale_factor), max_size)
+    if type(base_size) is int: return round(scaled_size)
+    else: return scaled_size
+
+def draw_button(screen : pygame.Surface, text: str, button_padding: tuple[int, int] | int, location: tuple[int, int], 
+                button_color : str | tuple[int, int, int] = "black", button_border_color : str | tuple[int, int, int] = "white", 
+                text_color : str | tuple[int, int, int] = "white", font : pygame.font.Font = None, 
+                fixed_width : bool = False, fixed_height : bool = False, button_border : bool = True) -> pygame.Rect:
+    if font is None: font = pygame.font.Font(None, get_scaled_size(18))
+    if type(button_padding) is int: button_padding = (button_padding, button_padding)
+    button_text = font.render(text, True, text_color)
+    button_rect = pygame.Rect(0, 0, (button_text.get_width() if not fixed_width else 0) + button_padding[0], 
+                              (button_text.get_height() if not fixed_height else 0) +  button_padding[1])
+    button_rect.center = (location[0], location[1])
+    button_text_rect = button_text.get_rect(center=button_rect.center)
+    pygame.draw.rect(__SCREEN, button_color, button_rect)
+    if button_border: pygame.draw.rect(__SCREEN, button_border_color, button_rect, 1)
+    screen.blit(button_text, button_text_rect)
+
+    return button_rect
 
 def display_error_box(message : str) -> None:
     pygame.font.init()
@@ -96,12 +123,14 @@ async def handle_server():
     except Exception as e:
         display_error_box(f"Could not connect to server: {str(e)}")
     if reply["type"] == "welcome" and reply["player"] != 1:
-        print("waiting for enemy's turn")
         reply = json.loads(await ws_connection.recv())
         if reply["type"] == "enemy_guess_result":
             enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
         else: 
             display_error_box(f"Server Error {str(e)}")
+    elif reply["type"] == "error":
+        display_error_box("Match full")
+
     while True:
         if guess:
             try:
@@ -129,14 +158,6 @@ def start_async_server_handling():
     asyncio.run(handle_server())
         	
 #Client logic
-def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
-    current_size = current_size if current_size else __SCREEN.get_size()
-    min_size = min_size if min_size else base_size / 3
-    max_size = max_size if max_size else base_size * 3
-    scale_factor = min(current_size[0] / scale_reference[0], current_size[1] / scale_reference[1])
-    scaled_size = min(max(min_size, base_size * scale_factor), max_size)
-    if type(base_size) is int: return round(scaled_size)
-    else: return scaled_size
 
 
 def draw_game_board() -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect]:
@@ -155,7 +176,7 @@ def draw_game_board() -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect]:
 
 def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, padding=0, 
               interactable=False, guessed=None) -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect] | None:
-    if not font: pygame.font.Font(None, get_scaled_size(24))
+    if not font: font = pygame.font.Font(None, get_scaled_size(24))
 
     x_offset, y_offset = LEFT_TOP
     x_offset += padding
@@ -208,7 +229,7 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
     
     #Confirm guess button
     if interactable and guessed:
-        guess_button_text = font.render("Confirm Guess", True, (255, 255, 255))
+        guess_button_text = font.render("Confirm Guess", True, "white")
         guess_button = pygame.Rect(0, 0, guess_button_text.get_width() + get_scaled_size(20), padding)
         guess_button.center = (x_offset + grid_px // 2, y_offset + grid_px + 0.75 * padding)
         pygame.draw.rect(__SCREEN, "blue" if can_guess else "grey", guess_button)
@@ -219,20 +240,46 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
     if interactable:
         return buttons, guess_button
 
-#main game loop
-def main() -> None:
+def draw_menu() -> tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
+    global __SCREEN
+
+    title_padding = get_scaled_size(50)
+
+    #Put in title
+    title_font = pygame.font.Font(None, get_scaled_size(80))
+    title = title_font.render("ShipWar", True, "white")
+    title_rect = title.get_rect(center=(__SCREEN.get_width() // 2, title.get_height() + title_padding))
+    __SCREEN.blit(title, title_rect)
+
+    #Buttons
+    title_button_dist = get_scaled_size(50)
+    button_padding = get_scaled_size(40)
+    button_button_dist = get_scaled_size(40)
+    button_font = pygame.font.Font(None, get_scaled_size(36))
+
+    #play button
+    play_button = draw_button(__SCREEN, "Play", (get_scaled_size(200), button_padding), 
+                              (__SCREEN.get_width() // 2, title_rect.center[1] + title_padding + title_button_dist), 
+                              fixed_width=True, button_color="blue", font=button_font)
+    settings_button = draw_button(__SCREEN, "Settings", (get_scaled_size(200), button_padding), 
+                                  (__SCREEN.get_width() // 2, play_button.center[1] + button_padding + button_button_dist), 
+                                  fixed_width=True, button_color="blue", font=button_font)
+    quit_button = draw_button(__SCREEN, "Quit", (get_scaled_size(200), button_padding), 
+                              (__SCREEN.get_width() // 2, settings_button.center[1] + button_padding + button_button_dist), 
+                              fixed_width=True, button_color="blue", font=button_font)
+
+    return play_button, settings_button, quit_button
+
+def settings() -> None:
+    pass
+
+def game() -> None:
     global __SCREEN
     global guess
-    
-    running = True
-    #Window setup
-    pygame.display.set_caption("ShipWar")
-    pygame.display.set_icon(pygame.image.load("./Sprites/Window_Icon.png"))
-
     all_sprites = pygame.sprite.Group()
     last_guess = []
 
-
+    running = True
     while running:
         # Clear the screen
         __SCREEN.fill((0, 0, 0))  # Black background
@@ -249,8 +296,9 @@ def main() -> None:
         for event in pygame.event.get():
             #Let the player quit the game
             if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.VIDEORESIZE:
+                pygame.quit()
+                return
+            if event.type == pygame.VIDEORESIZE:
                 minimum_window_size = 300
                 if event.size[0] < minimum_window_size: event.size = (minimum_window_size, event.size[1])
                 if event.size[1] < minimum_window_size: event.size = (event.size[0], minimum_window_size)
@@ -266,6 +314,38 @@ def main() -> None:
                 if last_guess and guess_button.collidepoint(event.pos):
                     guess = [last_guess[0], last_guess[1]]
                     last_guess = []
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE: return
+
+def menu() -> None:
+    global __SCREEN
+    while True:
+        __SCREEN.fill((0, 0, 0)) # Set background to black
+        play_button, settings_button, quit_button = draw_menu()
+        pygame.display.flip()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: 
+                pygame.quit()
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if play_button.collidepoint(event.pos):
+                    game()
+                    break
+                elif settings_button.collidepoint(event.pos):
+                    settings()
+                    break
+                elif quit_button.collidepoint(event.pos):
+                    pygame.quit()
+                    return
+
+def main() -> None:
+    #Window setup
+    pygame.display.set_caption("ShipWar")
+    pygame.display.set_icon(pygame.image.load("./Sprites/Window_Icon.png"))
+
+    menu()
+
 
 if __name__ == "__main__":
     global server_uri
@@ -273,7 +353,7 @@ if __name__ == "__main__":
     global player_id
     global guess
     
-    server_uri = "ws://0.0.0.0"
+    server_uri = "ws://localhost"
     server_port = "8765"
     player_id = 0
     guess = False
@@ -290,9 +370,8 @@ if __name__ == "__main__":
     global enemy_guessed_squares
     enemy_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
 
-    try:
-        threading.Thread(target=start_async_server_handling, daemon=True).start()
-        main()
-    except Exception as e: 
-        display_error_box(str(e))
+    threading.Thread(target=start_async_server_handling, daemon=True).start()
+    main()
     pygame.quit()
+
+    
