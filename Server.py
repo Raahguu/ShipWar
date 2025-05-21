@@ -20,7 +20,7 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     connected_clients += [socket]
     player_id = len(connected_clients)
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
-    print(f"{player_id} joined")
+    print(f"Player {player_id} joined")
 
     try:
         while True:

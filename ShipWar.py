@@ -36,12 +36,15 @@ def draw_button(screen : pygame.Surface, text: str, button_padding: tuple[int, i
     return button_rect
 
 def display_error_box(message : str) -> None:
+    global error_thrown
+    error_thrown = True
+
     pygame.font.init()
     font = pygame.font.Font(None, get_scaled_size(24))
     screen_width, screen_height = __SCREEN.get_size()
 
     # Layout settings
-    max_box_width = screen_width - 100
+    max_box_width = screen_width - get_scaled_size(100)
     padding = get_scaled_size(20)
     line_spacing = get_scaled_size(5)
     button_height = get_scaled_size(40)
@@ -111,7 +114,7 @@ def display_error_box(message : str) -> None:
         text_rect = button_text.get_rect(center=button_rect.center)
         __SCREEN.blit(button_text, text_rect)
 
-        pygame.display.update()
+        pygame.display.flip()
 
 #Server connection logic
 async def handle_server():
@@ -243,13 +246,19 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
 def draw_menu() -> tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
     global __SCREEN
 
+    #Title
     title_padding = get_scaled_size(50)
-
-    #Put in title
     title_font = pygame.font.Font(None, get_scaled_size(80))
     title = title_font.render("ShipWar", True, "white")
     title_rect = title.get_rect(center=(__SCREEN.get_width() // 2, title.get_height() + title_padding))
     __SCREEN.blit(title, title_rect)
+
+    #Subtitle
+    subtitle_padding = get_scaled_size(40)
+    subtitle_font = pygame.font.Font(None, get_scaled_size(24))
+    subtitle = subtitle_font.render("By Joshua Finlayson", True, "white")
+    subtitle_rect = subtitle.get_rect(center=(__SCREEN.get_width() // 2, subtitle.get_height() + subtitle_padding + title_rect.center[1]))
+    __SCREEN.blit(subtitle, subtitle_rect)
 
     #Buttons
     title_button_dist = get_scaled_size(50)
@@ -257,9 +266,8 @@ def draw_menu() -> tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
     button_button_dist = get_scaled_size(40)
     button_font = pygame.font.Font(None, get_scaled_size(36))
 
-    #play button
     play_button = draw_button(__SCREEN, "Play", (get_scaled_size(200), button_padding), 
-                              (__SCREEN.get_width() // 2, title_rect.center[1] + title_padding + title_button_dist), 
+                              (__SCREEN.get_width() // 2, title_rect.center[1] + title_padding + title_button_dist + subtitle_padding), 
                               fixed_width=True, button_color="blue", font=button_font)
     settings_button = draw_button(__SCREEN, "Settings", (get_scaled_size(200), button_padding), 
                                   (__SCREEN.get_width() // 2, play_button.center[1] + button_padding + button_button_dist), 
@@ -271,16 +279,54 @@ def draw_menu() -> tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
     return play_button, settings_button, quit_button
 
 def settings() -> None:
-    pass
+    print("settings")
+    global __SCREEN
+
+    __SCREEN.fill("black")
+    title_padding = get_scaled_size(50)
+
+    #Put in title
+    title_font = pygame.font.Font(None, get_scaled_size(80))
+    title = title_font.render("Settings", True, "white")
+    title_rect = title.get_rect(center=(__SCREEN.get_width() // 2, title.get_height() + title_padding))
+    __SCREEN.blit(title, title_rect)
+
+    #Buttons
+    title_button_dist = get_scaled_size(50)
+    button_padding = get_scaled_size(40)
+    button_button_dist = get_scaled_size(40)
+    button_font = pygame.font.Font(None, get_scaled_size(36))
+
+    #play button
+    player_name_field = draw_button(__SCREEN, "a", (get_scaled_size(200), button_padding), 
+                              (__SCREEN.get_width() // 2, title_rect.center[1] + title_padding + title_button_dist), 
+                              fixed_width=True, button_color="blue", font=button_font)
+    settings_button = draw_button(__SCREEN, "b", (get_scaled_size(200), button_padding), 
+                                  (__SCREEN.get_width() // 2, player_name_field.center[1] + button_padding + button_button_dist), 
+                                  fixed_width=True, button_color="blue", font=button_font)
+    back_button = draw_button(__SCREEN, "Back", (get_scaled_size(200), button_padding), 
+                              (__SCREEN.get_width() // 2, settings_button.center[1] + button_padding + button_button_dist), 
+                              fixed_width=True, button_color="blue", font=button_font)
+    
+    pygame.display.flip()
+    
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if player_name_field.collidepoint(event.pos): print("a")
+                if back_button.collidepoint(event.pos): return
 
 def game() -> None:
     global __SCREEN
     global guess
+    global error_thrown
     all_sprites = pygame.sprite.Group()
     last_guess = []
 
-    running = True
-    while running:
+    while not error_thrown:
         # Clear the screen
         __SCREEN.fill((0, 0, 0))  # Black background
 
@@ -319,7 +365,8 @@ def game() -> None:
 
 def menu() -> None:
     global __SCREEN
-    while True:
+    global error_thrown
+    while not error_thrown:
         __SCREEN.fill((0, 0, 0)) # Set background to black
         play_button, settings_button, quit_button = draw_menu()
         pygame.display.flip()
@@ -331,11 +378,9 @@ def menu() -> None:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if play_button.collidepoint(event.pos):
                     game()
-                    break
-                elif settings_button.collidepoint(event.pos):
+                if settings_button.collidepoint(event.pos):
                     settings()
-                    break
-                elif quit_button.collidepoint(event.pos):
+                if quit_button.collidepoint(event.pos):
                     pygame.quit()
                     return
 
@@ -352,7 +397,9 @@ if __name__ == "__main__":
     global server_port
     global player_id
     global guess
-    
+    global error_thrown
+
+    error_thrown = False
     server_uri = "ws://localhost"
     server_port = "8765"
     player_id = 0
