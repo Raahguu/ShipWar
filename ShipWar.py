@@ -278,9 +278,9 @@ def draw_menu() -> tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
 
     return play_button, settings_button, quit_button
 
-def settings() -> None:
-    print("settings")
+def draw_settings_menu(player_name_entry_field_inner_text : str) -> None:
     global __SCREEN
+    global error_thrown
 
     __SCREEN.fill("black")
     title_padding = get_scaled_size(50)
@@ -291,33 +291,78 @@ def settings() -> None:
     title_rect = title.get_rect(center=(__SCREEN.get_width() // 2, title.get_height() + title_padding))
     __SCREEN.blit(title, title_rect)
 
-    #Buttons
-    title_button_dist = get_scaled_size(50)
-    button_padding = get_scaled_size(40)
-    button_button_dist = get_scaled_size(40)
-    button_font = pygame.font.Font(None, get_scaled_size(36))
+    #Entry Fields
+    title_entry_field_dist = get_scaled_size(50)
+    entry_field_title_to_field_dist = get_scaled_size(20)
+    entry_field_y_padding = get_scaled_size(20)
+    entry_field_x_padding = get_scaled_size(20)
+    entry_field_font = pygame.font.Font(None, get_scaled_size(26))
+    entry_field_width = get_scaled_size(250)
 
-    #play button
-    player_name_field = draw_button(__SCREEN, "a", (get_scaled_size(200), button_padding), 
-                              (__SCREEN.get_width() // 2, title_rect.center[1] + title_padding + title_button_dist), 
+    player_name_field_title_surface = entry_field_font.render("Player Name: ", True, "white")
+    player_name_field_title_rect = player_name_field_title_surface.get_rect(center=(__SCREEN.get_width() // 2 - player_name_field_title_surface.get_width() - entry_field_title_to_field_dist // 2, title_rect.center[1] + title_padding + title_entry_field_dist))
+    __SCREEN.blit(player_name_field_title_surface, player_name_field_title_rect)
+
+    player_name_entry_field_text_surface = entry_field_font.render(player_name_entry_field_inner_text, True, "white")
+    
+    player_name_entry_field_rect = pygame.Rect(0, 0, entry_field_width, entry_field_font.get_height() + entry_field_y_padding)
+    player_name_entry_field_rect.center = (player_name_field_title_rect.center[0] + player_name_field_title_surface.get_width() // 2 + entry_field_title_to_field_dist + player_name_entry_field_rect.width // 2, player_name_field_title_rect.center[1])
+
+    player_name_entry_field_text_rect = player_name_entry_field_text_surface.get_rect(center=(player_name_entry_field_rect.center[0] - player_name_entry_field_rect.width // 2 + player_name_entry_field_text_surface.get_width() // 2 + entry_field_x_padding, player_name_entry_field_rect.center[1]))
+    pygame.draw.rect(__SCREEN, "grey30", player_name_entry_field_rect)
+    __SCREEN.blit(player_name_entry_field_text_surface, player_name_entry_field_text_rect)
+
+    #Buttons
+    entry_button_dist = get_scaled_size(70)
+    button_padding = get_scaled_size(40)
+    button_button_y_dist = get_scaled_size(40)
+    button_button_x_dist =  get_scaled_size(40)
+    button_font = pygame.font.Font(None, get_scaled_size(36))
+    button_width = get_scaled_size(250)
+
+    default_button = draw_button(__SCREEN, "Set all to Default", (button_width, button_padding), 
+                              ((__SCREEN.get_width() - button_width - button_button_x_dist) // 2, player_name_entry_field_rect.center[1] + entry_field_y_padding + entry_button_dist), 
                               fixed_width=True, button_color="blue", font=button_font)
-    settings_button = draw_button(__SCREEN, "b", (get_scaled_size(200), button_padding), 
-                                  (__SCREEN.get_width() // 2, player_name_field.center[1] + button_padding + button_button_dist), 
+    save_button = draw_button(__SCREEN, "Save", (button_width, button_padding), 
+                                  ((__SCREEN.get_width() + button_width + button_button_x_dist) // 2, default_button.center[1]), 
                                   fixed_width=True, button_color="blue", font=button_font)
-    back_button = draw_button(__SCREEN, "Back", (get_scaled_size(200), button_padding), 
-                              (__SCREEN.get_width() // 2, settings_button.center[1] + button_padding + button_button_dist), 
+    back_button = draw_button(__SCREEN, "Back", (button_width, button_padding), 
+                              (__SCREEN.get_width() // 2, save_button.center[1] + button_padding + button_button_y_dist), 
                               fixed_width=True, button_color="blue", font=button_font)
+
+    return player_name_entry_field_rect, default_button, save_button, back_button
+
+def settings() -> None:
+    global error_thrown
+    global player_name_text
     
-    pygame.display.flip()
+    focus_on = None
+    player_name_text = "default"
     
-    while True:
+    while not error_thrown:
+        player_name_entry_field_rect, default_button, save_button, back_button = draw_settings_menu(player_name_text)
+        pygame.display.flip()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if player_name_field.collidepoint(event.pos): print("a")
-                if back_button.collidepoint(event.pos): return
+                if default_button.collidepoint(event.pos):
+                    pass
+                elif save_button.collidepoint(event.pos):
+                    pass
+                elif back_button.collidepoint(event.pos): return
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if player_name_entry_field_rect.collidepoint(event.pos):
+                    focus_on = player_name_entry_field_rect
+                else: focus_on = None
+            if event.type == pygame.KEYDOWN and focus_on != None:
+                if focus_on == player_name_entry_field_rect:
+                    if event.key == pygame.K_BACKSPACE: player_name_text = player_name_text[:-1]
+                    else: player_name_text += event.unicode
+
 
 def game() -> None:
     global __SCREEN
