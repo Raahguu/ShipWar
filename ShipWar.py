@@ -278,9 +278,11 @@ def draw_menu() -> tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
 
     return play_button, settings_button, quit_button
 
-def draw_settings_menu(player_name_entry_field_inner_text : str) -> None:
+def draw_settings_menu(player_name_entry_field_inner_text : str, player_name_entry_field_cursor_index : int, focus_on = None) -> None:
     global __SCREEN
     global error_thrown
+
+    if focus_on: focus_on = True
 
     __SCREEN.fill("black")
     title_padding = get_scaled_size(50)
@@ -303,6 +305,8 @@ def draw_settings_menu(player_name_entry_field_inner_text : str) -> None:
     player_name_field_title_rect = player_name_field_title_surface.get_rect(center=(__SCREEN.get_width() // 2 - player_name_field_title_surface.get_width() - entry_field_title_to_field_dist // 2, title_rect.center[1] + title_padding + title_entry_field_dist))
     __SCREEN.blit(player_name_field_title_surface, player_name_field_title_rect)
 
+    if player_name_entry_field_inner_text == None: player_name_entry_field_inner_text = "Default"
+
     player_name_entry_field_text_surface = entry_field_font.render(player_name_entry_field_inner_text, True, "white")
     
     player_name_entry_field_rect = pygame.Rect(0, 0, entry_field_width, entry_field_font.get_height() + entry_field_y_padding)
@@ -311,6 +315,16 @@ def draw_settings_menu(player_name_entry_field_inner_text : str) -> None:
     player_name_entry_field_text_rect = player_name_entry_field_text_surface.get_rect(center=(player_name_entry_field_rect.center[0] - player_name_entry_field_rect.width // 2 + player_name_entry_field_text_surface.get_width() // 2 + entry_field_x_padding, player_name_entry_field_rect.center[1]))
     pygame.draw.rect(__SCREEN, "grey30", player_name_entry_field_rect)
     __SCREEN.blit(player_name_entry_field_text_surface, player_name_entry_field_text_rect)
+
+    #cursor for the entry field
+    if focus_on:
+        player_name_entry_field_cursor_width = get_scaled_size(1)
+        player_name_entry_field_cursor_height_padding = get_scaled_size(5)
+
+        if player_name_entry_field_cursor_index == None: player_name_entry_field_cursor_index = len(player_name_entry_field_inner_text)
+        player_name_entry_field_cursor_rect = pygame.Rect(0, 0, player_name_entry_field_cursor_width, player_name_field_title_surface.get_height() + player_name_entry_field_cursor_height_padding)
+        player_name_entry_field_cursor_rect.center = (player_name_entry_field_text_rect.center[0] - player_name_entry_field_text_rect.width // 2 +  int(entry_field_font.size(player_name_entry_field_inner_text[:player_name_entry_field_cursor_index])[0]), player_name_entry_field_text_rect.center[1])
+        pygame.draw.rect(__SCREEN, "white", player_name_entry_field_cursor_rect)
 
     #Buttons
     entry_button_dist = get_scaled_size(70)
@@ -337,31 +351,40 @@ def settings() -> None:
     global player_name_text
     
     focus_on = None
-    player_name_text = "default"
+    player_name_cursor_index = len(player_name_text)
     
     while not error_thrown:
-        player_name_entry_field_rect, default_button, save_button, back_button = draw_settings_menu(player_name_text)
+        player_name_entry_field_rect, default_button, save_button, back_button = draw_settings_menu(player_name_text, player_name_cursor_index, focus_on)
         pygame.display.flip()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if default_button.collidepoint(event.pos):
                     pass
                 elif save_button.collidepoint(event.pos):
                     pass
                 elif back_button.collidepoint(event.pos): return
-
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:return
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if player_name_entry_field_rect.collidepoint(event.pos):
                     focus_on = player_name_entry_field_rect
                 else: focus_on = None
-            if event.type == pygame.KEYDOWN and focus_on != None:
+            elif event.type == pygame.KEYDOWN and focus_on != None:
                 if focus_on == player_name_entry_field_rect:
-                    if event.key == pygame.K_BACKSPACE: player_name_text = player_name_text[:-1]
-                    else: player_name_text += event.unicode
+                    if event.key == pygame.K_BACKSPACE: 
+                        player_name_text = player_name_text[:player_name_cursor_index - 1] + player_name_text[player_name_cursor_index:]
+                        player_name_cursor_index -= 1
+                    elif event.key == pygame.K_LEFT: player_name_cursor_index -= 1
+                    elif event.key == pygame.K_RIGHT: player_name_cursor_index += 1
+                    elif not event.key in (pygame.K_RETURN, pygame.K_DELETE, pygame.K_TAB): 
+                        player_name_text = player_name_text[:player_name_cursor_index] + event.unicode + player_name_text[player_name_cursor_index:]
+                        player_name_cursor_index += 1
+                    #check cursor isn't out of bounds
+                    if player_name_cursor_index > len(player_name_text): player_name_cursor_index = len(player_name_text)
+                    elif player_name_cursor_index < 0: player_name_cursor_index = 0
 
 
 def game() -> None:
@@ -448,6 +471,7 @@ if __name__ == "__main__":
     server_uri = "ws://localhost"
     server_port = "8765"
     player_id = 0
+    player_name_text = "default"
     guess = False
 
     pygame.init()
