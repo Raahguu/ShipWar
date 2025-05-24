@@ -6,7 +6,7 @@ import websockets.asyncio.server
 import sys
 import os
 
-DEFAULT_PORT = 8765
+DEFAULT_PORT = 6363
 MAX_PLAYERS = 2
 connected_clients : list[websockets.asyncio.server.ServerConnection] = []
 

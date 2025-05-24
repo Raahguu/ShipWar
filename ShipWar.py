@@ -396,22 +396,23 @@ def display_error_box(message : str) -> None:
     box_y = (screen_height - box_height) // 2
 
     # OK button
-    button = Button(__SCREEN, "OK", [20, 10], [box_x + box_width // 2, box_y + box_height - button_height // 2 - padding], color="red", font_size=font_size)
+    ok_button = Button(__SCREEN, "OK", [20, 10], [box_x + box_width // 2, box_y + box_height - button_height // 2 - padding], color="red", font_size=font_size)
 
     # Create a surface for the scrollable area
     scroll_area_rect = pygame.Rect(box_x + padding, box_y + padding, box_width - 2 * padding, visible_text_height)
     scroll_surface = pygame.Surface(scroll_area_rect.size)
     scroll_surface.set_colorkey((0, 0, 0))
+    print(message)
 
-    running = True
-    while running:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if button.pressed(event.pos):
-                    running = False
+                if ok_button.pressed(event.pos):
+                    pygame.quit()
+                    exit()
             elif event.type == pygame.MOUSEWHEEL and scrollable:
                 scroll_offset -= event.y * scroll_speed
                 scroll_offset = max(0, min(scroll_offset, max_scroll))
@@ -446,13 +447,15 @@ def display_error_box(message : str) -> None:
             pygame.draw.rect(screen, "white", bar_rect)
 
         # Draw OK button
-        button.draw()
+        ok_button.draw()
 
         pygame.display.flip()
 
 #Server connection logic
 async def handle_server():
     global guess
+    global server_uri
+    global server_port
     try:
         ws_connection = await websockets.connect(server_uri + ":" + server_port)
         reply = json.loads(await ws_connection.recv())
@@ -495,8 +498,6 @@ def start_async_server_handling():
     asyncio.run(handle_server())
         	
 #Client logic
-
-
 def draw_game_board() -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect]:
     pygame.font.init()
     font = pygame.font.Font(None, get_scaled_size(24))
@@ -683,6 +684,13 @@ def game() -> None:
     all_sprites = pygame.sprite.Group()
     last_guess = []
 
+    global GRID_SIZE
+    GRID_SIZE = 10
+    global user_guessed_squares
+    user_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
+    global enemy_guessed_squares
+    enemy_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
+
     threading.Thread(target=start_async_server_handling, daemon=True).start()
 
     while not error_thrown:
@@ -752,33 +760,28 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    global server_uri
-    global server_port
-    global player_id
-    global guess
     global error_thrown
-    global player_name
-
     error_thrown = False
+
+    global server_uri
     server_uri = "ws://localhost"
-    server_port = "8765"
+
+    global server_port
+    server_port = "6363"
+
+    global player_id
     player_id = 0
-    player_name = "default"
+
+    global guess
     guess = False
+
+    global player_name
+    player_name = "Default"
 
     pygame.init()
     
     global __SCREEN
     __SCREEN = pygame.display.set_mode((1280, 700), pygame.RESIZABLE)
 
-    global GRID_SIZE
-    GRID_SIZE = 10
-    global user_guessed_squares
-    user_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
-    global enemy_guessed_squares
-    enemy_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
-
     main()
     pygame.quit()
-
-    
