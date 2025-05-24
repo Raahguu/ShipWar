@@ -127,7 +127,7 @@ class Text(Widget):
         except: pass
 
     def draw(self):
-        self._calc_rect()
+        self._calc_surface()
         self.screen.blit(self.surface, self.rect)
         
 class Button(Widget):
@@ -322,7 +322,7 @@ class EntryField(Widget):
         self.__center = list(value)
         self.title.center = (self.center[0] - self.title.font.size(self.title.inner_text)[0] - get_scaled_size(self.title_field_dist) // 2, self.center[1])
         self._calc_rect()
-        self.input.center = (self.rect.center[0] - self.rect.width // 2 + self.input.rect.width // 2 + self.input.padding[0], self.rect.center[1])
+        self.input.center = (self.rect.center[0] - self.rect.width // 2 + self.input.rect.width // 2 + get_scaled_size(self.input.padding[0]), self.rect.center[1])
 
     @property
     def width(self) -> int:
@@ -368,80 +368,85 @@ def display_error_box(message : str) -> None:
     global error_thrown
     error_thrown = True
 
-    pygame.font.init()
-    font = pygame.font.Font(None, get_scaled_size(24))
-    screen_width, screen_height = __SCREEN.get_size()
+    screen = __SCREEN
+    screen_width, screen_height = screen.get_size()
+    font_size = 24
+    font = pygame.font.Font(None, get_scaled_size(font_size))
 
-    # Layout settings
-    max_box_width = screen_width - get_scaled_size(100)
     padding = get_scaled_size(20)
     line_spacing = get_scaled_size(5)
     button_height = get_scaled_size(40)
-    scroll_speed = get_scaled_size(20)  # Pixels per scroll event
+    scroll_speed = get_scaled_size(20)
 
-    # Wrap text
+    max_box_width = screen_width - get_scaled_size(100)
     max_chars_per_line = max_box_width // font.size("A")[0]
     wrapped_lines = textwrap.wrap(message, width=max_chars_per_line)
 
-    # Line and box dimensions
     line_height = font.get_height()
     total_text_height = len(wrapped_lines) * (line_height + line_spacing)
     visible_text_height = min(total_text_height, screen_height - button_height - 3 * padding - get_scaled_size(75))
 
-    # Determine scrollable height
-    scrollable = total_text_height > visible_text_height
     scroll_offset = 0
+    scrollable = total_text_height > visible_text_height
     max_scroll = total_text_height - visible_text_height if scrollable else 0
 
     box_width = max(min(max_box_width, max(font.size(line)[0] for line in wrapped_lines)), 150) + 2 * padding
     box_height = visible_text_height + 2 * padding + button_height + get_scaled_size(10)
-
     box_x = (screen_width - box_width) // 2
     box_y = (screen_height - box_height) // 2
 
-    # Button
-    button_width = get_scaled_size(150)
-    button_x = box_x + (box_width - button_width) // 2
-    button_y = box_y + visible_text_height + 2 * padding
-    button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+    # OK button
+    button = Button(__SCREEN, "OK", [20, 10], [box_x + box_width // 2, box_y + box_height - button_height // 2 - padding], color="red", font_size=font_size)
 
-    # Scroll area surface
-    scroll_area = pygame.Surface((box_width - 2 * padding, total_text_height))
-    scroll_area.fill((200, 0, 0))
+    # Create a surface for the scrollable area
+    scroll_area_rect = pygame.Rect(box_x + padding, box_y + padding, box_width - 2 * padding, visible_text_height)
+    scroll_surface = pygame.Surface(scroll_area_rect.size)
+    scroll_surface.set_colorkey((0, 0, 0))
 
-    while True:
+    running = True
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                return
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 4:  # Scroll up
-                    scroll_offset = max(scroll_offset - scroll_speed, 0)
-                elif event.button == 5:  # Scroll down
-                    scroll_offset = min(scroll_offset + scroll_speed, max_scroll)
-                elif button_rect.collidepoint(event.pos):
-                    pygame.quit()
-                    return
+                exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if button.pressed(event.pos):
+                    running = False
+            elif event.type == pygame.MOUSEWHEEL and scrollable:
+                scroll_offset -= event.y * scroll_speed
+                scroll_offset = max(0, min(scroll_offset, max_scroll))
 
-        pygame.draw.rect(__SCREEN, (200, 0, 0), (box_x, box_y, box_width, box_height))
-        pygame.draw.rect(__SCREEN, (255, 255, 255), (box_x, box_y, box_width, box_height), 2)
+        screen.fill("black")
 
-        # Render wrapped text to scroll_area
-        scroll_area.fill((200, 0, 0))
-        for i, line in enumerate(wrapped_lines):
-            text_surface = font.render(line, True, (255, 255, 255))
-            scroll_area.blit(text_surface, (0, i * (line_height + line_spacing)))
+        # Draw box
+        pygame.draw.rect(screen, "grey30", (box_x, box_y, box_width, box_height))
+        pygame.draw.rect(screen, "white", (box_x, box_y, box_width, box_height), 1)
 
-        # Blit scroll area with offset
-        visible_rect = pygame.Rect(0, scroll_offset, scroll_area.get_width(), visible_text_height)
-        __SCREEN.blit(scroll_area.subsurface(visible_rect), (box_x + padding, box_y + padding))
+        # Prepare scrollable text surface
+        scroll_surface.fill("grey30")
 
-        # Draw button
-        pygame.draw.rect(__SCREEN, (50, 50, 50), button_rect)
-        pygame.draw.rect(__SCREEN, (255, 255, 255), button_rect, 2)
-        button_text = font.render("Close", True, (255, 255, 255))
-        text_rect = button_text.get_rect(center=button_rect.center)
-        __SCREEN.blit(button_text, text_rect)
+        y = -scroll_offset
+        for line in wrapped_lines:
+            text_surface = font.render(line, True, "white")
+            scroll_surface.blit(text_surface, (0, y))
+            y += line_height + line_spacing
+
+        # Blit the scroll area with clipping
+        screen.set_clip(scroll_area_rect)
+        screen.blit(scroll_surface, scroll_area_rect.topleft)
+        screen.set_clip(None)
+
+        # Draw scroll bar
+        if scrollable:
+            bar_width = get_scaled_size(10)
+            bar_height = max(visible_text_height * visible_text_height // total_text_height, get_scaled_size(20))
+            scroll_ratio = scroll_offset / max_scroll if max_scroll > 0 else 0
+            bar_y = scroll_area_rect.y + int(scroll_ratio * (visible_text_height - bar_height))
+            bar_rect = pygame.Rect(scroll_area_rect.right - bar_width, bar_y, bar_width, bar_height)
+            pygame.draw.rect(screen, "white", bar_rect)
+
+        # Draw OK button
+        button.draw()
 
         pygame.display.flip()
 
@@ -652,6 +657,8 @@ def settings() -> None:
     global error_thrown
     global player_name
     
+    #display_error_box("qwertyuiopasdfghjklzxcvbnm"*1000)
+
     player_name_entry_field = EntryField(__SCREEN, (0, 0), "Player Name: ", font_size=26, title_field_dist=20, input_padding=20, width=250, input_text=player_name)
     
     while not error_thrown:
