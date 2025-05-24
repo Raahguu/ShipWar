@@ -7,6 +7,7 @@ import asyncio
 import pygame.event
 import websockets
 import json
+import abc
 
 def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
     global __SCREEN
@@ -18,22 +19,350 @@ def get_scaled_size(base_size : int, min_size : int = None, max_size : int = Non
     if type(base_size) is int: return round(scaled_size)
     else: return scaled_size
 
-def draw_button(screen : pygame.Surface, text: str, button_padding: tuple[int, int] | int, location: tuple[int, int], 
-                button_color : str | tuple[int, int, int] = "black", button_border_color : str | tuple[int, int, int] = "white", 
-                text_color : str | tuple[int, int, int] = "white", font : pygame.font.Font = None, 
-                fixed_width : bool = False, fixed_height : bool = False, button_border : bool = True) -> pygame.Rect:
-    if font is None: font = pygame.font.Font(None, get_scaled_size(18))
-    if type(button_padding) is int: button_padding = (button_padding, button_padding)
-    button_text = font.render(text, True, text_color)
-    button_rect = pygame.Rect(0, 0, (button_text.get_width() if not fixed_width else 0) + button_padding[0], 
-                              (button_text.get_height() if not fixed_height else 0) +  button_padding[1])
-    button_rect.center = (location[0], location[1])
-    button_text_rect = button_text.get_rect(center=button_rect.center)
-    pygame.draw.rect(__SCREEN, button_color, button_rect)
-    if button_border: pygame.draw.rect(__SCREEN, button_border_color, button_rect, 1)
-    screen.blit(button_text, button_text_rect)
 
-    return button_rect
+class Widget(metaclass=abc.ABCMeta):
+    @classmethod
+    @abc.abstractmethod
+    def _calc_rect(self):
+        """
+        Recalculates the Rect, in case of any changes since last calculation
+        """
+    @classmethod
+    @abc.abstractmethod
+    def draw(self):
+        """
+        Draw the object to the screen
+        """
+
+
+class Text(Widget):
+    """
+    A class for defining and handling Text in pygame
+    """
+    def __init__(self, screen : pygame.Surface, inner_text: str, center: list[int, int], 
+                color : str | list[int, int, int] = "white", font_type : str = None, font_size : int = 18, 
+                parent : Widget = None, padding : list[int, int] = [0, 0]):
+        self.screen = screen
+        self.font_type = font_type
+        self.font_size = font_size
+
+        self.inner_text = inner_text
+        self.center = center
+        self.color = color
+        self.__parent = parent
+        self.padding = padding
+
+    @property
+    def inner_text(self) -> str:
+        try: return self.__inner_text
+        except: return ""
+    @inner_text.setter
+    def inner_text(self, value : str):
+        self.__inner_text = str(value)
+        self._calc_surface()
+
+    @property
+    def color(self) -> list[int, int, int] | str:
+        try: return self.__color
+        except: return "white"
+    @color.setter
+    def color(self, value : list[int, int, int] | str):
+        self.__color = value
+        self._calc_surface()
+
+    @property
+    def center(self) -> list[int, int]:
+        try: return self.__center
+        except: return [0, 0]
+    @center.setter
+    def center(self, value : list[int, int]):
+        self.__center = value
+        self._calc_rect()
+
+    @property
+    def font_size(self) -> int:
+        try: return self.__font_size
+        except: return 12
+    @font_size.setter
+    def font_size(self, value : int):
+        if type(value) != int: raise TypeError("The font size of text must be an integer")
+        if value < 0: raise ValueError("The font size of text must be greater then 0")
+        self.__font_size = value
+    
+    @property
+    def font_type(self) -> str:
+        try: return self.__font_type
+        except: return None
+    @font_type.setter
+    def font_type(self, value : str):
+        pygame.font.Font(value, self.font_size)
+        self.__font_type = value
+
+    @property
+    def font(self) -> pygame.font.Font:
+        try: return pygame.font.Font(self.font_type, get_scaled_size(self.font_size))
+        except: return pygame.font.Font()
+    @font.setter
+    def font(self, value : pygame.font.Font):
+        raise AttributeError("You must edit font_size, and font_type seperatly")
+    
+    @property
+    def padding(self) -> list[int, int]:
+        try: return self.__padding
+        except: return [0, 0]
+    @padding.setter
+    def padding(self, value : list[int, int] | int):
+        if type(value) not in [list, tuple, int]: raise TypeError(f"The text padding must be either a list, a tuple, or an int, not a {type(value)}")
+        if type(value) in [list, tuple] and len(value) != 2: raise TypeError(f"The text padding must have a length of 2")
+        if type(value) == int: value = [int(value), int(value)]
+        self.__padding = list(value)
+
+    def _calc_surface(self):
+        self.surface = self.font.render(self.inner_text, True, self.color)
+        self._calc_rect()
+    
+    def _calc_rect(self):
+        self.rect = self.surface.get_rect(center=self.center)
+        try: self.__parent._calc_rect()
+        except: pass
+
+    def draw(self):
+        self._calc_rect()
+        self.screen.blit(self.surface, self.rect)
+        
+class Button(Widget):
+    """
+    A class for defining and handling Buttons in pygame
+    """
+    def __init__(self, screen : pygame.surface, inner_text: str, padding: list[int, int] | int, center: list[int, int], 
+                color : str | list[int, int, int] = "black", border_color : str | list[int, int, int] = "white", 
+                text_color : str | list[int, int, int] = "white", font_type : str = None, font_size : int = 18,
+                fixed_width : bool = False, fixed_height : bool = False, have_border : bool = True):
+        self.screen = screen
+        self.text = Text(screen, inner_text, center, text_color, font_type, font_size, parent=self)
+
+        self.padding = padding
+        self.center = center
+        self.color = color
+
+        self.have_border = have_border
+        self.bordor_color = border_color
+
+        self.fixed_width = fixed_width
+        self.fixed_height = fixed_height
+
+        self._calc_rect()
+
+    @property
+    def screen(self) -> pygame.Surface:
+        return self.__screen
+    @screen.setter
+    def screen(self, value : pygame.Surface):
+        if type(value) != pygame.Surface: raise TypeError(f"The Screen attribute must be a pygame.Surface, not a {type(value)}")
+        self.__screen = value
+        try: self.text.screen = self.__screen
+        except: pass
+
+    @property
+    def padding(self) -> list[int, int]:
+        try: return self.__padding
+        except: return [0, 0]
+    @padding.setter
+    def padding(self, value : list[int, int] | int):
+        if type(value) not in (int, list, tuple) or type(value) in (list, tuple) and len(value) != 2: raise TypeError(f"The padding can only either be an int, or a list of two ints for different x and y padding; not a {type(value)}")
+        if type(value) is int: value = [value, value]
+        if type(value) is tuple: value = list(value)
+        self.__padding = value
+        self._calc_rect()
+    
+    @property
+    def center(self) -> list[int, int]:
+        try: return self.__center
+        except: return [0, 0]
+    @center.setter
+    def center(self, value : list[int, int]):
+        if type(value) not in (tuple, list) or len(value) != 2: raise TypeError(f"The center can only either be an tuple, or a list of two ints for the x, and y values; not a {type(value)}")
+        self.__center = list(value)
+        self._calc_rect()
+
+    @property
+    def fixed_width(self) -> bool:
+        try: return self.__fixed_width
+        except: return False
+    @fixed_width.setter
+    def fixed_width(self, value : bool):
+        self.__fixed_width = bool(value)
+        self._calc_rect()
+
+    @property
+    def fixed_height(self) -> bool:
+        try: return self.__fixed_height
+        except: return False
+    @fixed_height.setter
+    def fixed_height(self, value : bool):
+        self.__fixed_height = bool(value)
+        self._calc_rect()
+       
+    def _calc_rect(self) -> None:
+        self.rect = pygame.Rect(0, 0, (self.text.surface.get_width() if not self.fixed_width else 0) + get_scaled_size(self.padding[0]), 
+                                (self.text.surface.get_height() if not self.fixed_height else 0) +  get_scaled_size(self.padding[1]))
+        self.rect.center = (self.center[0], self.center[1])
+
+    def draw(self) -> None:
+        self._calc_rect()
+        pygame.draw.rect(self.screen, self.color, self.rect)
+        if self.have_border: pygame.draw.rect(self.screen, self.bordor_color, self.rect, 1)
+        self.text.draw()
+
+    def pressed(self, *args):
+        return self.rect.collidepoint(*args)
+    
+
+class EntryField(Widget):
+    class Cursor(Widget):
+        def __init__(self, screen : pygame.Surface, visible : bool, editing_text : Text, starting_index : int = None, width : int = 1, color : list[int, int, int] | str = "white", height_padding : int = 5):
+            self.screen = screen
+            self.visible = visible
+            self.editing_text = editing_text
+            self.width = width
+            self.color = color
+            self.index = starting_index
+            self.height_padding = height_padding
+        
+        @property
+        def width(self):
+            try: return self.__width
+            except: 0
+        @width.setter
+        def width(self, value : int):
+            if type(value) != int or value < 0: raise TypeError("The Entry Fields Cursor's width needs to be an integer greater than or equal to 0")
+            self.__width = value
+            self._calc_rect()
+
+        @property
+        def index(self):
+            try: return self.__index
+            except: 0
+        @index.setter
+        def index(self, value : int):
+            if value == None: value = len(self.editing_text.inner_text)
+            if type(value) != int: raise TypeError("The Entry Fields Cursor's index needs to be an integer")
+            if value < 0: value = 0
+            if value > len(self.editing_text.inner_text): value = len(self.editing_text.inner_text)
+            self.__index = value
+            self._calc_rect()
+
+        @property
+        def height_padding(self) -> int:
+            try: return self.__height_padding
+            except: return 0
+        @height_padding.setter
+        def height_padding(self, value : int):
+            if value == None: value = 0
+            if type(value) != int: raise TypeError("The Entry Fields Cursor's height padding needs to be an integer")
+            if value < 0: value = 0
+            self.__height_padding = value
+            self._calc_rect()
+
+        @property
+        def editting_text(self):
+            return self.__editting_text
+        @editting_text.setter
+        def editting_text(self, value : Text):
+            if type(value) != Text: raise TypeError("The Entry Fields Cursor's editting_text needs to be of the type Text")
+            self.__editting_text = value
+            self._calc_rect()
+
+        def _calc_rect(self):
+            self.rect = pygame.Rect(0, 0, get_scaled_size(self.width), self.editing_text.rect.height + get_scaled_size(self.height_padding))
+            self.rect.center = (self.editing_text.center[0] - self.editing_text.rect.width // 2 +  int(self.editing_text.font.size(self.editing_text.inner_text[:self.index])[0]), self.editing_text.center[1])
+
+        def draw(self):
+            self._calc_rect()
+            if self.visible: pygame.draw.rect(self.screen, self.color, self.rect)
+
+    def __init__(self, screen : pygame.Surface, center : list[int, int], title_text : str = "title", title_field_dist : int = 20, 
+                 text_color : list[int, int, int] | str = "white", font_type : str = None, font_size : int = 26, input_text : str = "", 
+                 input_padding : list[int, int] = [20, 20], width : int = 250, color : list[int, int, int] | str = "grey30",
+                 visible_cursor : bool = True, cursor_color : list[int, int, int] | str = "white", cursor_width : int = 1,
+                 cursor_height_padding : int = 5): 
+        self.screen = screen
+        self.has_focus = False
+        self.title_field_dist = title_field_dist
+        self.color = color
+
+        self.title = Text(self.screen, title_text, (0, 0), text_color, font_type, font_size, self)
+        self.input = Text(self.screen, input_text, (0, 0), text_color, font_type, font_size, self, input_padding)
+        self.cursor = EntryField.Cursor(self.screen, visible_cursor, self.input, width=cursor_width, color=cursor_color, height_padding=cursor_height_padding)
+
+        self.center = center
+        self.width = width
+
+        self._calc_rect()
+
+    @property
+    def screen(self) -> pygame.Surface:
+        return self.__screen
+    @screen.setter
+    def screen(self, value : pygame.Surface):
+        if type(value) != pygame.Surface: raise TypeError("The Entry Field's screen, must be a surface")
+        self.__screen = value
+        try:
+            self.title.screen = self.screen
+            self.input.screen = self.screen
+        except: pass
+
+    @property
+    def center(self) -> list[int, int]:
+        try: return self.__center
+        except: return [0, 0]
+    @center.setter
+    def center(self, value : list[int, int]):
+        if type(value) not in (list, tuple) or type(value) in (list, tuple) and len(value) != 2: raise ValueError("The center must be a list or tuple of length 2")
+        self.__center = list(value)
+        self.title.center = (self.center[0] - self.title.font.size(self.title.inner_text)[0] - get_scaled_size(self.title_field_dist) // 2, self.center[1])
+        self._calc_rect()
+        self.input.center = (self.rect.center[0] - self.rect.width // 2 + self.input.rect.width // 2 + self.input.padding[0], self.rect.center[1])
+
+    @property
+    def width(self) -> int:
+        """Width of the Entry Field"""
+        try: return self.__width
+        except: return 0
+    @width.setter
+    def width(self, value : int):
+        if type(value) != int or value < 0: raise TypeError("The Width must be an int greater than or equal to 0")
+        self.__width = value
+        self._calc_rect()
+
+    def _calc_rect(self):
+        self.rect = pygame.Rect(0, 0, get_scaled_size(self.width), self.input.rect.height + get_scaled_size(self.input.padding[1]))
+        self.rect.center = (self.title.center[0] + self.title.rect.width // 2 + get_scaled_size(self.title_field_dist) + self.rect.width // 2, self.title.center[1])
+
+    def draw(self) -> None:
+        self._calc_rect()
+        self.title.draw()
+        pygame.draw.rect(self.screen, self.color, self.rect)
+        self.input.draw()
+        if self.has_focus: self.cursor.draw()
+
+    def pressed(self, *args):
+        self.has_focus = self.rect.collidepoint(*args)
+
+    def type(self, event : pygame.event.Event):
+        """Handels typing to the Entry Field"""
+        if not self.has_focus: return
+        if event.key == pygame.K_BACKSPACE: 
+            self.input.inner_text = self.input.inner_text[:self.cursor.index - 1] + self.input.inner_text[self.cursor.index:]
+            self.cursor.index -= 1
+        elif event.key == pygame.K_DELETE: 
+            self.input.inner_text = self.input.inner_text[:self.cursor.index] + self.input.inner_text[self.cursor.index + 1:]
+        elif event.key == pygame.K_LEFT: self.cursor.index -= 1
+        elif event.key == pygame.K_RIGHT: self.cursor.index += 1
+        elif not event.key in (pygame.K_RETURN, pygame.K_DELETE, pygame.K_TAB): 
+            if self.input.font.size(self.input.inner_text + event.unicode)[0] >= self.width - self.input.padding[0] * 2: return
+            self.input.inner_text = self.input.inner_text[:self.cursor.index] + event.unicode + self.input.inner_text[self.cursor.index:]
+            self.cursor.index += 1
 
 def display_error_box(message : str) -> None:
     global error_thrown
@@ -243,7 +572,7 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
     if interactable:
         return buttons, guess_button
 
-def draw_menu() -> tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
+def draw_menu() -> tuple[Button, Button, Button]:
     global __SCREEN
 
     #Title
@@ -264,97 +593,69 @@ def draw_menu() -> tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
     title_button_dist = get_scaled_size(50)
     button_padding = get_scaled_size(40)
     button_button_dist = get_scaled_size(40)
-    button_font = pygame.font.Font(None, get_scaled_size(36))
 
-    play_button = draw_button(__SCREEN, "Play", (get_scaled_size(200), button_padding), 
+    play_button = Button(__SCREEN, "Play", (get_scaled_size(200), button_padding), 
                               (__SCREEN.get_width() // 2, title_rect.center[1] + title_padding + title_button_dist + subtitle_padding), 
-                              fixed_width=True, button_color="blue", font=button_font)
-    settings_button = draw_button(__SCREEN, "Settings", (get_scaled_size(200), button_padding), 
+                              fixed_width=True, color="blue", font_size=36)
+    settings_button = Button(__SCREEN, "Settings", (get_scaled_size(200), button_padding), 
                                   (__SCREEN.get_width() // 2, play_button.center[1] + button_padding + button_button_dist), 
-                                  fixed_width=True, button_color="blue", font=button_font)
-    quit_button = draw_button(__SCREEN, "Quit", (get_scaled_size(200), button_padding), 
+                                  fixed_width=True, color="blue", font_size=36)
+    quit_button = Button(__SCREEN, "Quit", (get_scaled_size(200), button_padding), 
                               (__SCREEN.get_width() // 2, settings_button.center[1] + button_padding + button_button_dist), 
-                              fixed_width=True, button_color="blue", font=button_font)
+                              fixed_width=True, color="blue", font_size=36)
+    play_button.draw()
+    settings_button.draw()
+    quit_button.draw()
 
     return play_button, settings_button, quit_button
 
-def draw_settings_menu(player_name_entry_field_inner_text : str, player_name_entry_field_cursor_index : int, focus_on = None) -> None:
+def draw_settings_menu(player_name_entry_field : EntryField) -> tuple[EntryField, Button, Button, Button]:
     global __SCREEN
-    global error_thrown
-
-    if focus_on: focus_on = True
 
     __SCREEN.fill("black")
     title_padding = get_scaled_size(50)
 
     #Put in title
-    title_font = pygame.font.Font(None, get_scaled_size(80))
-    title = title_font.render("Settings", True, "white")
-    title_rect = title.get_rect(center=(__SCREEN.get_width() // 2, title.get_height() + title_padding))
-    __SCREEN.blit(title, title_rect)
+    title = Text(__SCREEN, "Settings", (__SCREEN.get_width() // 2, title_padding), font_size=80)
+    title.font.set_bold(True)
+    title.draw()
 
     #Entry Fields
     title_entry_field_dist = get_scaled_size(50)
-    entry_field_title_to_field_dist = get_scaled_size(20)
-    entry_field_y_padding = get_scaled_size(20)
-    entry_field_x_padding = get_scaled_size(20)
-    entry_field_font = pygame.font.Font(None, get_scaled_size(26))
-    entry_field_width = get_scaled_size(250)
 
-    player_name_field_title_surface = entry_field_font.render("Player Name: ", True, "white")
-    player_name_field_title_rect = player_name_field_title_surface.get_rect(center=(__SCREEN.get_width() // 2 - player_name_field_title_surface.get_width() - entry_field_title_to_field_dist // 2, title_rect.center[1] + title_padding + title_entry_field_dist))
-    __SCREEN.blit(player_name_field_title_surface, player_name_field_title_rect)
-
-    if player_name_entry_field_inner_text == None: player_name_entry_field_inner_text = "Default"
-
-    player_name_entry_field_text_surface = entry_field_font.render(player_name_entry_field_inner_text, True, "white")
-    
-    player_name_entry_field_rect = pygame.Rect(0, 0, entry_field_width, entry_field_font.get_height() + entry_field_y_padding)
-    player_name_entry_field_rect.center = (player_name_field_title_rect.center[0] + player_name_field_title_surface.get_width() // 2 + entry_field_title_to_field_dist + player_name_entry_field_rect.width // 2, player_name_field_title_rect.center[1])
-
-    player_name_entry_field_text_rect = player_name_entry_field_text_surface.get_rect(center=(player_name_entry_field_rect.center[0] - player_name_entry_field_rect.width // 2 + player_name_entry_field_text_surface.get_width() // 2 + entry_field_x_padding, player_name_entry_field_rect.center[1]))
-    pygame.draw.rect(__SCREEN, "grey30", player_name_entry_field_rect)
-    __SCREEN.blit(player_name_entry_field_text_surface, player_name_entry_field_text_rect)
-
-    #cursor for the entry field
-    if focus_on:
-        player_name_entry_field_cursor_width = get_scaled_size(1)
-        player_name_entry_field_cursor_height_padding = get_scaled_size(5)
-
-        if player_name_entry_field_cursor_index == None: player_name_entry_field_cursor_index = len(player_name_entry_field_inner_text)
-        player_name_entry_field_cursor_rect = pygame.Rect(0, 0, player_name_entry_field_cursor_width, player_name_field_title_surface.get_height() + player_name_entry_field_cursor_height_padding)
-        player_name_entry_field_cursor_rect.center = (player_name_entry_field_text_rect.center[0] - player_name_entry_field_text_rect.width // 2 +  int(entry_field_font.size(player_name_entry_field_inner_text[:player_name_entry_field_cursor_index])[0]), player_name_entry_field_text_rect.center[1])
-        pygame.draw.rect(__SCREEN, "white", player_name_entry_field_cursor_rect)
+    player_name_entry_field.center = (__SCREEN.get_width() // 2, title.center[1] + title_padding + title_entry_field_dist)
+    player_name_entry_field.draw()
 
     #Buttons
     entry_button_dist = get_scaled_size(70)
     button_padding = get_scaled_size(40)
     button_button_y_dist = get_scaled_size(40)
     button_button_x_dist =  get_scaled_size(40)
-    button_font = pygame.font.Font(None, get_scaled_size(36))
     button_width = get_scaled_size(250)
 
-    default_button = draw_button(__SCREEN, "Set all to Default", (button_width, button_padding), 
-                              ((__SCREEN.get_width() - button_width - button_button_x_dist) // 2, player_name_entry_field_rect.center[1] + entry_field_y_padding + entry_button_dist), 
-                              fixed_width=True, button_color="blue", font=button_font)
-    save_button = draw_button(__SCREEN, "Save", (button_width, button_padding), 
+    default_button = Button(__SCREEN, "Set all to Default", (button_width, button_padding), 
+                              ((__SCREEN.get_width() - button_width - button_button_x_dist) // 2, player_name_entry_field.center[1] + player_name_entry_field.rect.height + entry_button_dist), 
+                              fixed_width=True, color="blue", font_size=36)
+    save_button = Button(__SCREEN, "Save", (button_width, button_padding), 
                                   ((__SCREEN.get_width() + button_width + button_button_x_dist) // 2, default_button.center[1]), 
-                                  fixed_width=True, button_color="blue", font=button_font)
-    back_button = draw_button(__SCREEN, "Back", (button_width, button_padding), 
+                                  fixed_width=True, color="blue", font_size=36)
+    back_button = Button(__SCREEN, "Back", (button_width, button_padding), 
                               (__SCREEN.get_width() // 2, save_button.center[1] + button_padding + button_button_y_dist), 
-                              fixed_width=True, button_color="blue", font=button_font)
+                              fixed_width=True, color="blue", font_size=36)
+    default_button.draw()
+    save_button.draw()
+    back_button.draw()
 
-    return player_name_entry_field_rect, default_button, save_button, back_button
+    return player_name_entry_field, default_button, save_button, back_button
 
 def settings() -> None:
     global error_thrown
-    global player_name_text
+    global player_name
     
-    focus_on = None
-    player_name_cursor_index = len(player_name_text)
+    player_name_entry_field = EntryField(__SCREEN, (0, 0), "Player Name: ", font_size=26, title_field_dist=20, input_padding=20, width=250, input_text=player_name)
     
     while not error_thrown:
-        player_name_entry_field_rect, default_button, save_button, back_button = draw_settings_menu(player_name_text, player_name_cursor_index, focus_on)
+        player_name_entry_field, default_button, save_button, back_button = draw_settings_menu(player_name_entry_field)
         pygame.display.flip()
 
         for event in pygame.event.get():
@@ -362,29 +663,16 @@ def settings() -> None:
                 pygame.quit()
                 return
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if default_button.collidepoint(event.pos):
-                    pass
-                elif save_button.collidepoint(event.pos):
-                    pass
-                elif back_button.collidepoint(event.pos): return
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:return
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if player_name_entry_field_rect.collidepoint(event.pos):
-                    focus_on = player_name_entry_field_rect
-                else: focus_on = None
-            elif event.type == pygame.KEYDOWN and focus_on != None:
-                if focus_on == player_name_entry_field_rect:
-                    if event.key == pygame.K_BACKSPACE: 
-                        player_name_text = player_name_text[:player_name_cursor_index - 1] + player_name_text[player_name_cursor_index:]
-                        player_name_cursor_index -= 1
-                    elif event.key == pygame.K_LEFT: player_name_cursor_index -= 1
-                    elif event.key == pygame.K_RIGHT: player_name_cursor_index += 1
-                    elif not event.key in (pygame.K_RETURN, pygame.K_DELETE, pygame.K_TAB): 
-                        player_name_text = player_name_text[:player_name_cursor_index] + event.unicode + player_name_text[player_name_cursor_index:]
-                        player_name_cursor_index += 1
-                    #check cursor isn't out of bounds
-                    if player_name_cursor_index > len(player_name_text): player_name_cursor_index = len(player_name_text)
-                    elif player_name_cursor_index < 0: player_name_cursor_index = 0
+                #Entry Fields
+                player_name_entry_field.pressed(event.pos)
+                #Buttons
+                if default_button.pressed(event.pos): pass
+                elif save_button.pressed(event.pos):
+                    player_name = player_name_entry_field.input.inner_text
+                elif back_button.pressed(event.pos): return
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
+            elif event.type == pygame.KEYDOWN:
+                if player_name_entry_field.has_focus: player_name_entry_field.type(event)
 
 
 def game() -> None:
@@ -393,6 +681,8 @@ def game() -> None:
     global error_thrown
     all_sprites = pygame.sprite.Group()
     last_guess = []
+
+    threading.Thread(target=start_async_server_handling, daemon=True).start()
 
     while not error_thrown:
         # Clear the screen
@@ -444,11 +734,11 @@ def menu() -> None:
                 pygame.quit()
                 return
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if play_button.collidepoint(event.pos):
+                if play_button.pressed(event.pos):
                     game()
-                if settings_button.collidepoint(event.pos):
+                if settings_button.pressed(event.pos):
                     settings()
-                if quit_button.collidepoint(event.pos):
+                if quit_button.pressed(event.pos):
                     pygame.quit()
                     return
 
@@ -466,12 +756,13 @@ if __name__ == "__main__":
     global player_id
     global guess
     global error_thrown
+    global player_name
 
     error_thrown = False
     server_uri = "ws://localhost"
     server_port = "8765"
     player_id = 0
-    player_name_text = "default"
+    player_name = "default"
     guess = False
 
     pygame.init()
@@ -486,7 +777,6 @@ if __name__ == "__main__":
     global enemy_guessed_squares
     enemy_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
 
-    threading.Thread(target=start_async_server_handling, daemon=True).start()
     main()
     pygame.quit()
 
