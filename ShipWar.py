@@ -770,7 +770,7 @@ if __name__ == "__main__":
     server_uri = "ws://localhost"
 
     global server_port
-    server_port = "6363"
+    server_port = "4444"
 
     global player_id
     player_id = 0

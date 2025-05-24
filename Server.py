@@ -64,4 +64,4 @@ if __name__ == "__main__":
                 print("The port needs to be an integer greater than 0")
         print(os.system('ipconfig | find "IPv4 Address"'))
         print(f"Port: {port}")
-        asyncio.run(start_server(DEFAULT_PORT))
+        asyncio.run(start_server(port))
