@@ -364,9 +364,8 @@ class EntryField(Widget):
             self.input.inner_text = self.input.inner_text[:self.cursor.index] + event.unicode + self.input.inner_text[self.cursor.index:]
             self.cursor.index += 1
 
-def display_error_box(message : str) -> None:
-    global error_thrown
-    error_thrown = True
+def display_error_box() -> None:
+    global error_message
 
     screen = __SCREEN
     screen_width, screen_height = screen.get_size()
@@ -380,7 +379,7 @@ def display_error_box(message : str) -> None:
 
     max_box_width = screen_width - get_scaled_size(100)
     max_chars_per_line = max_box_width // font.size("A")[0]
-    wrapped_lines = textwrap.wrap(message, width=max_chars_per_line)
+    wrapped_lines = textwrap.wrap(error_message, width=max_chars_per_line)
 
     line_height = font.get_height()
     total_text_height = len(wrapped_lines) * (line_height + line_spacing)
@@ -402,7 +401,7 @@ def display_error_box(message : str) -> None:
     scroll_area_rect = pygame.Rect(box_x + padding, box_y + padding, box_width - 2 * padding, visible_text_height)
     scroll_surface = pygame.Surface(scroll_area_rect.size)
     scroll_surface.set_colorkey((0, 0, 0))
-    print(message)
+    print(error_message)
 
     while True:
         for event in pygame.event.get():
@@ -454,6 +453,7 @@ def display_error_box(message : str) -> None:
 #Server connection logic
 async def handle_server():
     global guess
+    global error_message
     global server_uri
     global server_port
     try:
@@ -461,30 +461,34 @@ async def handle_server():
         reply = json.loads(await ws_connection.recv())
         print(reply)
     except Exception as e:
-        display_error_box(f"Could not connect to server: {str(e)}")
+        error_message = f"Could not connect to server: {str(e)}"
+        return
     if reply["type"] == "welcome" and reply["player"] != 1:
         reply = json.loads(await ws_connection.recv())
         if reply["type"] == "enemy_guess_result":
             enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
         else: 
-            display_error_box(f"Server Error {str(e)}")
+            error_message = f"Server Error {str(e)}"
+            return
     elif reply["type"] == "error":
-        display_error_box("Match full")
+        error_message = "Match full"
+        return
 
-    while True:
+    while not error_message:
         if guess:
             try:
                 await ws_connection.send(json.dumps({
                     "type":"guess", 
                     "position": [guess[0], guess[1]]}))
             except Exception as e:
-                display_error_box(f"Failed to send guess: {str(e)}")
+                error_message = f"Failed to send guess: {str(e)}"
+                return
             
             reply = json.loads(await ws_connection.recv())
             if reply["type"] == "guess_result":
                 user_guessed_squares[guess[0]][guess[1]] = reply["result"]
             else: 
-                display_error_box(f"Server Error {str(e)}")
+                error_message = f"Server Error {str(e)}"
        	    
             guess = False
             
@@ -492,7 +496,8 @@ async def handle_server():
             # if reply["type"] == "enemy_guess_result":
             #     enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
             # else: 
-            #     display_error_box(f"Server Error {str(e)}")
+            #     error_message = f"Server Error {str(e)}"
+            #     return
 
 def start_async_server_handling():
     asyncio.run(handle_server())
@@ -649,14 +654,12 @@ def draw_settings_menu(player_name_entry_field : EntryField) -> tuple[EntryField
     return player_name_entry_field, default_button, save_button, back_button
 
 def settings() -> None:
-    global error_thrown
+    global error_message
     global player_name
-    
-    #display_error_box("qwertyuiopasdfghjklzxcvbnm"*1000)
 
     player_name_entry_field = EntryField(__SCREEN, (0, 0), "Player Name: ", font_size=26, title_field_dist=20, input_padding=20, width=250, input_text=player_name)
     
-    while not error_thrown:
+    while not error_message:
         player_name_entry_field, default_button, save_button, back_button = draw_settings_menu(player_name_entry_field)
         pygame.display.flip()
 
@@ -680,7 +683,7 @@ def settings() -> None:
 def game() -> None:
     global __SCREEN
     global guess
-    global error_thrown
+    global error_message
     all_sprites = pygame.sprite.Group()
     last_guess = []
 
@@ -693,7 +696,7 @@ def game() -> None:
 
     threading.Thread(target=start_async_server_handling, daemon=True).start()
 
-    while not error_thrown:
+    while not error_message:
         # Clear the screen
         __SCREEN.fill((0, 0, 0))  # Black background
 
@@ -732,8 +735,8 @@ def game() -> None:
 
 def menu() -> None:
     global __SCREEN
-    global error_thrown
-    while not error_thrown:
+    global error_message
+    while not error_message:
         __SCREEN.fill((0, 0, 0)) # Set background to black
         play_button, settings_button, quit_button = draw_menu()
         pygame.display.flip()
@@ -760,8 +763,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    global error_thrown
-    error_thrown = False
+    global error_message
+    error_message = ""
 
     global server_uri
     server_uri = "ws://localhost"
@@ -784,4 +787,5 @@ if __name__ == "__main__":
     __SCREEN = pygame.display.set_mode((1280, 700), pygame.RESIZABLE)
 
     main()
+    if error_message: display_error_box()
     pygame.quit()
