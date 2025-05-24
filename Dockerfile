@@ -5,6 +5,6 @@ COPY Server.py .
 
 RUN pip install websockets
 
-EXPOSE 8765
+EXPOSE 6363
 
-CMD ["python", "Server.py"]
+CMD ["python", "Server.py Docker"]

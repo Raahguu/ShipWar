@@ -5,5 +5,5 @@ services:
       dockerfile: Dockerfile
     container_name: shipwar-server
     ports: 
-      - "${PORT:-8765}:8765"
+      - "${PORT:-6363}:6363"
     restart: unless-stopped

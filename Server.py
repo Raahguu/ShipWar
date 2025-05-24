@@ -3,6 +3,8 @@ import json
 import websockets
 import websockets.asyncio
 import websockets.asyncio.server
+import sys
+import os
 
 DEFAULT_PORT = 8765
 MAX_PLAYERS = 2
@@ -28,7 +30,8 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
             data = json.loads(message)
             
             if data["type"] == "guess":
-                if data["position"] in [[i, i] for i in range(9)]:
+                #TODO: Actual hit detection, which would first requre ships to actually be placed somewhere first
+                if data["position"] in [[i, i] for i in range(9)]: # temporary hit/miss code just for testing 
                     await socket.send(json.dumps({"type": "guess_result", "result": 2}))
                 else: await socket.send(json.dumps({"type": "guess_result", "result": 1}))
                 
@@ -45,4 +48,20 @@ async def start_server(port : int):
         await server.serve_forever()
 
 if __name__ == "__main__":
-    asyncio.run(start_server(DEFAULT_PORT))
+    try:
+        if sys.argv[1] != "Docker": 1/0
+        #this means the server is running in a docker container
+        asyncio.run(start_server(DEFAULT_PORT))
+    except:
+        port = 0
+        while True:
+            port = input("What port would you like to host the server on: ")
+            try: 
+                port = int(port)
+                if port < 1: 1/0
+                break
+            except: 
+                print("The port needs to be an integer greater than 0")
+        print(os.system('ipconfig | find "IPv4 Address"'))
+        print(f"Port: {port}")
+        asyncio.run(start_server(DEFAULT_PORT))
