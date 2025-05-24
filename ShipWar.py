@@ -580,19 +580,14 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
 def draw_menu() -> tuple[Button, Button, Button]:
     global __SCREEN
 
-    #Title
+    #Titles
     title_padding = get_scaled_size(50)
-    title_font = pygame.font.Font(None, get_scaled_size(80))
-    title = title_font.render("ShipWar", True, "white")
-    title_rect = title.get_rect(center=(__SCREEN.get_width() // 2, title.get_height() + title_padding))
-    __SCREEN.blit(title, title_rect)
+    title = Text(__SCREEN, "ShipWar", (__SCREEN.get_width() // 2, title_padding), font_size=80, padding=title_padding)
+    title.draw()
 
-    #Subtitle
-    subtitle_padding = get_scaled_size(40)
-    subtitle_font = pygame.font.Font(None, get_scaled_size(24))
-    subtitle = subtitle_font.render("By Joshua Finlayson", True, "white")
-    subtitle_rect = subtitle.get_rect(center=(__SCREEN.get_width() // 2, subtitle.get_height() + subtitle_padding + title_rect.center[1]))
-    __SCREEN.blit(subtitle, subtitle_rect)
+    subtitle_padding = get_scaled_size(50)
+    subtitle = Text(__SCREEN, "By Joshua Finlayson", (__SCREEN.get_width() // 2, title.padding[1] + title.center[1]), font_size=24, padding=subtitle_padding)
+    subtitle.draw()
 
     #Buttons
     title_button_dist = get_scaled_size(50)
@@ -600,7 +595,7 @@ def draw_menu() -> tuple[Button, Button, Button]:
     button_button_dist = get_scaled_size(40)
 
     play_button = Button(__SCREEN, "Play", (get_scaled_size(200), button_padding), 
-                              (__SCREEN.get_width() // 2, title_rect.center[1] + title_padding + title_button_dist + subtitle_padding), 
+                              (__SCREEN.get_width() // 2, subtitle.center[1] + title_button_dist + subtitle.padding[1]), 
                               fixed_width=True, color="blue", font_size=36)
     settings_button = Button(__SCREEN, "Settings", (get_scaled_size(200), button_padding), 
                                   (__SCREEN.get_width() // 2, play_button.center[1] + button_padding + button_button_dist), 
@@ -622,7 +617,6 @@ def draw_settings_menu(player_name_entry_field : EntryField) -> tuple[EntryField
 
     #Put in title
     title = Text(__SCREEN, "Settings", (__SCREEN.get_width() // 2, title_padding), font_size=80)
-    title.font.set_bold(True)
     title.draw()
 
     #Entry Fields
