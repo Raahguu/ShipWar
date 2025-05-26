@@ -169,7 +169,7 @@ class TextArea(Widget):
         size_of_space = self.font.size(" ")[0]
         
         wrapped_text = []
-        length = 0
+        length = -size_of_space
         last_i = 0
         for i, word in enumerate(text_list):
             #If the word is too long to display by itself
@@ -177,18 +177,18 @@ class TextArea(Widget):
                 for j in range(1, len(word[0])):
                     part_length = self.font.size(word[0][0:j])[0]
                     if part_length > max_text_width:
-                        text_list.insert(i + 1, [word[0][j:-1], word[1] - part_length])
-                        word = [word[0][0:j], part_length - size_of_space]
+                        text_list.insert(i + 1, [word[0][j:-1], word[1] - part_length - size_of_space])
+                        word = [word[0][0:j], part_length]
                         text_list[i] = word
                         break
             
             length += word[1] + size_of_space
             if length > max_text_width:
-                wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i]]), length - word[1]]]
+                wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i]]), length - word[1] - size_of_space]]
                 length = word[1]
                 last_i = i
             elif i == len(text_list) - 1:
-                wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i]]), length - word[1]]]
+                wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i + 1]]), length]]
         
         self.wrapped_text = wrapped_text
     
