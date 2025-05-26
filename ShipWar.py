@@ -9,42 +9,20 @@ import pygameWidgets
 
 def display_error_box() -> None:
     global error_message
+    global __SCREEN
 
-    screen = __SCREEN
-    screen_width, screen_height = screen.get_size()
-    font_size = 24
-    font = pygame.font.Font(None, pygameWidgets.get_scaled_size(font_size))
+    scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [__SCREEN.get_width() // 2, __SCREEN.get_height() // 2], 
+                      """QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]
+                      RDCVBNJKU YTGBNKIUYTGB RVHR VVI RV VO VWV ERFIWR V
+                      RFIURB RIYROPR VPOV EROV ERIV ER VEOIR V ERVI IV EV RVOR VOE V E VI VV VI  IV VI V E VERHVJRVO EHRV RE HVI EHV HVOUH ERVOI ERHV VOIERHVO ERVPI HE VPHV PIJVPI EVPI RO VIH VOIROV PV HOHV
+                      EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE e
+                      Hello World. Eee3 yv lwuwe fwl el QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]
+                      EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE e
+                      Hello World. Eee3 yv lwuwe fwl el QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]""" * 3
+                      , padding=[pygameWidgets.get_scaled_size(15), pygameWidgets.get_scaled_size(15)])
+    scroll.draw()
 
-    padding = pygameWidgets.get_scaled_size(20)
-    line_spacing = pygameWidgets.get_scaled_size(5)
-    button_height = pygameWidgets.get_scaled_size(40)
-    scroll_speed = pygameWidgets.get_scaled_size(20)
-
-    max_box_width = screen_width - pygameWidgets.get_scaled_size(100)
-    max_chars_per_line = max_box_width // font.size("A")[0]
-    wrapped_lines = textwrap.wrap(error_message, width=max_chars_per_line)
-
-    line_height = font.get_height()
-    total_text_height = len(wrapped_lines) * (line_height + line_spacing)
-    visible_text_height = min(total_text_height, screen_height - button_height - 3 * padding - pygameWidgets.get_scaled_size(75))
-
-    scroll_offset = 0
-    scrollable = total_text_height > visible_text_height
-    max_scroll = total_text_height - visible_text_height if scrollable else 0
-
-    box_width = max(min(max_box_width, max(font.size(line)[0] for line in wrapped_lines)), 150) + 2 * padding
-    box_height = visible_text_height + 2 * padding + button_height + pygameWidgets.get_scaled_size(10)
-    box_x = (screen_width - box_width) // 2
-    box_y = (screen_height - box_height) // 2
-
-    # OK button
-    ok_button = pygameWidgets.Button(__SCREEN, "OK", [20, 10], [box_x + box_width // 2, box_y + box_height - button_height // 2 - padding], color="red", font_size=font_size)
-
-    # Create a surface for the scrollable area
-    scroll_area_rect = pygame.Rect(box_x + padding, box_y + padding, box_width - 2 * padding, visible_text_height)
-    scroll_surface = pygame.Surface(scroll_area_rect.size)
-    scroll_surface.set_colorkey((0, 0, 0))
-    print(error_message)
+    ok_button = pygameWidgets.Button(__SCREEN, "OK", 10, [scroll.center[0], scroll.center[1] + scroll.size[1] // 2 + 25], "blue")
 
     while True:
         for event in pygame.event.get():
@@ -55,39 +33,13 @@ def display_error_box() -> None:
                 if ok_button.pressed(event.pos):
                     pygame.quit()
                     exit()
-            elif event.type == pygame.MOUSEWHEEL and scrollable:
-                scroll_offset -= event.y * scroll_speed
-                scroll_offset = max(0, min(scroll_offset, max_scroll))
+            elif event.type == pygame.MOUSEWHEEL:
+                scroll.scroll_bar.scroll(event)
+                
 
-        screen.fill("black")
+        __SCREEN.fill("black")
 
-        # Draw box
-        pygame.draw.rect(screen, "grey30", (box_x, box_y, box_width, box_height))
-        pygame.draw.rect(screen, "white", (box_x, box_y, box_width, box_height), 1)
-
-        # Prepare scrollable text surface
-        scroll_surface.fill("grey30")
-
-        y = -scroll_offset
-        for line in wrapped_lines:
-            text_surface = font.render(line, True, "white")
-            scroll_surface.blit(text_surface, (0, y))
-            y += line_height + line_spacing
-
-        # Blit the scroll area with clipping
-        screen.set_clip(scroll_area_rect)
-        screen.blit(scroll_surface, scroll_area_rect.topleft)
-        screen.set_clip(None)
-
-        # Draw scroll bar
-        if scrollable:
-            bar_width = pygameWidgets.get_scaled_size(10)
-            bar_height = max(visible_text_height * visible_text_height // total_text_height, pygameWidgets.get_scaled_size(20))
-            scroll_ratio = scroll_offset / max_scroll if max_scroll > 0 else 0
-            bar_y = scroll_area_rect.y + int(scroll_ratio * (visible_text_height - bar_height))
-            bar_rect = pygame.Rect(scroll_area_rect.right - bar_width, bar_y, bar_width, bar_height)
-            pygame.draw.rect(screen, "white", bar_rect)
-
+        scroll.draw()
         # Draw OK button
         ok_button.draw()
 
@@ -274,17 +226,6 @@ def draw_settings_menu(player_name_entry_field : pygameWidgets.EntryField) -> tu
     player_name_entry_field.center = (__SCREEN.get_width() // 2, title.center[1] + title_padding + title_entry_field_dist)
     player_name_entry_field.draw()
 
-    scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [__SCREEN.get_width() // 2, __SCREEN.get_height() // 2], 
-                      """QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]
-                      RDCVBNJKU YTGBNKIUYTGB RVHR VVI RV VO VWV ERFIWR V
-                      RFIURB RIYROPR VPOV EROV ERIV ER VEOIR V ERVI IV EV RVOR VOE V E VI VV VI  IV VI V E VERHVJRVO EHRV RE HVI EHV HVOUH ERVOI ERHV VOIERHVO ERVPI HE VPHV PIJVPI EVPI RO VIH VOIROV PV HOHV
-                      EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE e
-                      Hello World. Eee3 yv lwuwe fwl el QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]
-                      EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE e
-                      Hello World. Eee3 yv lwuwe fwl el QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]"""
-                      , padding=[pygameWidgets.get_scaled_size(15), pygameWidgets.get_scaled_size(15)])
-    scroll.draw()
-
     #Buttons
     entry_button_dist = pygameWidgets.get_scaled_size(70)
     button_padding = pygameWidgets.get_scaled_size(20)
@@ -325,7 +266,7 @@ def settings() -> None:
                 #Entry Fields
                 player_name_entry_field.pressed(event.pos)
                 #Buttons
-                if default_button.pressed(event.pos): pass
+                if default_button.pressed(event.pos): error_message = "Default yes"
                 elif save_button.pressed(event.pos):
                     player_name = player_name_entry_field.input.inner_text
                 elif back_button.pressed(event.pos): return

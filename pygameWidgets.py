@@ -129,8 +129,36 @@ class TextArea(Widget):
     """
     A class for having multiple lines of text
     """
+    class scrollBar(Widget):
+        def __init__(self, screen : pygame.surface, size : list[int, int], right : int, scroll_range : list[int, int], 
+                     color : str | list[int, int] = "white", scroll_speed = 5, visible = True, parent : Widget = None, scroll_offset : int = 0):
+            self.screen = screen
+            self.size = size
+            self.right = right
+            self.scroll_range = scroll_range
+            self.color = color
+            self.visible = visible
+            self.scroll_speed = scroll_speed
+            self.parent = parent
+            self.scroll_offset = scroll_offset
+        
+        def _calc_rect(self):
+            self.rect = pygame.Rect(self.right - self.size[0], self.scroll_range[0] + self.scroll_offset, self.size[0], self.size[1])
+
+        def scroll(self, event : pygame.event.Event):
+            self.scroll_offset -= event.y * self.scroll_speed
+            self.scroll_offset = max(0, min(self.scroll_offset, self.scroll_range[1] - self.scroll_range[0]))
+            try: self.parent.scroll_offset = self.scroll_offset
+            except: pass
+        
+        def draw(self):
+            if self.size[1] > self.scroll_range[1] - self.scroll_range[0]: return
+
+            self._calc_rect()
+            pygame.draw.rect(self.screen, self.color, self.rect)
+
     def __init__(self, screen : pygame.surface, size : list[int, int], center : list[int, int], inner_text : str, text_color : str | list[int, int, int] = "white", 
-                 backdrop_color : str | list[int, int, int] = "black", scrollable : bool = True, scroll_speed : int = 10, 
+                 backdrop_color : str | list[int, int, int] = "black", scroll_bar_width : int = 5, scroll_offset : int = 0,
                  padding : int | list[int, int] = [0, 0], font_size : int = 18, font_type : str = 'droid-sans-mono.ttf'):
         self.screen = screen
         self.size = size
@@ -138,12 +166,11 @@ class TextArea(Widget):
         self.inner_text = inner_text
         self.text_color = text_color
         self.backdrop_color = backdrop_color
-        self.scrollable = scrollable
-        self.scroll_speed = scroll_speed
         self.padding = padding
         self.font_size = font_size
         self.font_type = font_type
-        self.scroll_offset = 0
+        self.scroll_offset = scroll_offset
+        self.scroll_bar_width = scroll_bar_width
 
         self._calc_rect()
         self._calc_wrap_text()
@@ -192,6 +219,11 @@ class TextArea(Widget):
         
         self.wrapped_text = wrapped_text
     
+    def _calc_scroll_bar(self):
+        self.scroll_bar = TextArea.scrollBar(self.screen, [get_scaled_size(self.scroll_bar_width), self.size[1] ** 2 / (len(self.wrapped_text) * self.font.get_height())], 
+                                             self.rect.right, [self.rect.top, self.rect.bottom], len(self.wrapped_text), 
+                                             visible=(len(self.wrapped_text) * self.font.get_height() + 2*self.padding[1] > self.size[1]), parent=self, scroll_offset=self.scroll_offset)
+
     def _calc_rect(self):
         self.rect = pygame.Rect(0, 0, get_scaled_size(self.size[0]), get_scaled_size(self.size[1]))
         self.rect.center = [self.center[0], self.center[1]]
@@ -199,15 +231,18 @@ class TextArea(Widget):
     def draw(self):
         self._calc_wrap_text()
         self._calc_rect()
+        self._calc_scroll_bar()
         pygame.draw.rect(self.screen, self.backdrop_color, self.rect)
         pygame.draw.rect(self.screen, "white", self.rect, 1)
 
         line_height = self.font.get_height()
         for i, line in enumerate(self.wrapped_text):
-            text_center = [self.rect.left + get_scaled_size(self.padding[0]) + line[1] // 2, self.rect.top + get_scaled_size(self.padding[1]) + (i + 0.5) * line_height + self.scroll_offset]
+            text_center = [self.rect.left + get_scaled_size(self.padding[0]) + line[1] // 2, self.rect.top + get_scaled_size(self.padding[1]) + (i + 0.5) * line_height - self.scroll_offset]
             if text_center[1] < self.rect.top + get_scaled_size(self.padding[0]) or text_center[1] > self.rect.bottom - get_scaled_size(self.padding[1]): continue
             line_text = Text(self.screen, line[0], text_center, self.text_color, self.font_type, self.font_size)
             line_text.draw()
+        
+        self.scroll_bar.draw()
 
 class Button(Widget):
     """
