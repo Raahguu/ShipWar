@@ -5,7 +5,7 @@ import threading
 import asyncio
 import websockets
 import json
-from pygameWidgets import *
+import pygameWidgets
 
 def display_error_box() -> None:
     global error_message
@@ -13,32 +13,32 @@ def display_error_box() -> None:
     screen = __SCREEN
     screen_width, screen_height = screen.get_size()
     font_size = 24
-    font = pygame.font.Font(None, get_scaled_size(font_size))
+    font = pygame.font.Font(None, pygameWidgets.get_scaled_size(font_size))
 
-    padding = get_scaled_size(20)
-    line_spacing = get_scaled_size(5)
-    button_height = get_scaled_size(40)
-    scroll_speed = get_scaled_size(20)
+    padding = pygameWidgets.get_scaled_size(20)
+    line_spacing = pygameWidgets.get_scaled_size(5)
+    button_height = pygameWidgets.get_scaled_size(40)
+    scroll_speed = pygameWidgets.get_scaled_size(20)
 
-    max_box_width = screen_width - get_scaled_size(100)
+    max_box_width = screen_width - pygameWidgets.get_scaled_size(100)
     max_chars_per_line = max_box_width // font.size("A")[0]
     wrapped_lines = textwrap.wrap(error_message, width=max_chars_per_line)
 
     line_height = font.get_height()
     total_text_height = len(wrapped_lines) * (line_height + line_spacing)
-    visible_text_height = min(total_text_height, screen_height - button_height - 3 * padding - get_scaled_size(75))
+    visible_text_height = min(total_text_height, screen_height - button_height - 3 * padding - pygameWidgets.get_scaled_size(75))
 
     scroll_offset = 0
     scrollable = total_text_height > visible_text_height
     max_scroll = total_text_height - visible_text_height if scrollable else 0
 
     box_width = max(min(max_box_width, max(font.size(line)[0] for line in wrapped_lines)), 150) + 2 * padding
-    box_height = visible_text_height + 2 * padding + button_height + get_scaled_size(10)
+    box_height = visible_text_height + 2 * padding + button_height + pygameWidgets.get_scaled_size(10)
     box_x = (screen_width - box_width) // 2
     box_y = (screen_height - box_height) // 2
 
     # OK button
-    ok_button = Button(__SCREEN, "OK", [20, 10], [box_x + box_width // 2, box_y + box_height - button_height // 2 - padding], color="red", font_size=font_size)
+    ok_button = pygameWidgets.Button(__SCREEN, "OK", [20, 10], [box_x + box_width // 2, box_y + box_height - button_height // 2 - padding], color="red", font_size=font_size)
 
     # Create a surface for the scrollable area
     scroll_area_rect = pygame.Rect(box_x + padding, box_y + padding, box_width - 2 * padding, visible_text_height)
@@ -81,8 +81,8 @@ def display_error_box() -> None:
 
         # Draw scroll bar
         if scrollable:
-            bar_width = get_scaled_size(10)
-            bar_height = max(visible_text_height * visible_text_height // total_text_height, get_scaled_size(20))
+            bar_width = pygameWidgets.get_scaled_size(10)
+            bar_height = max(visible_text_height * visible_text_height // total_text_height, pygameWidgets.get_scaled_size(20))
             scroll_ratio = scroll_offset / max_scroll if max_scroll > 0 else 0
             bar_y = scroll_area_rect.y + int(scroll_ratio * (visible_text_height - bar_height))
             bar_rect = pygame.Rect(scroll_area_rect.right - bar_width, bar_y, bar_width, bar_height)
@@ -148,8 +148,8 @@ def start_async_server_handling():
 #Client logic
 def draw_game_board() -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect]:
     pygame.font.init()
-    font = pygame.font.Font(None, get_scaled_size(24))
-    padding = get_scaled_size(50)
+    font = pygame.font.Font(None, pygameWidgets.get_scaled_size(24))
+    padding = pygameWidgets.get_scaled_size(50)
 
     # Left board - Radar (shots fired)
     radar_buttons, guess_button = draw_grid(LEFT_TOP=(0, 0), title="Radar", label=True, font=font, padding=padding, interactable=True, guessed=user_guessed_squares)
@@ -162,7 +162,7 @@ def draw_game_board() -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect]:
 
 def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, padding=0, 
               interactable=False, guessed=None) -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect] | None:
-    if not font: font = pygame.font.Font(None, get_scaled_size(24))
+    if not font: font = pygame.font.Font(None, pygameWidgets.get_scaled_size(24))
 
     x_offset, y_offset = LEFT_TOP
     x_offset += padding
@@ -216,7 +216,7 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
     #Confirm guess button
     if interactable and guessed:
         guess_button_text = font.render("Confirm Guess", True, "white")
-        guess_button = pygame.Rect(0, 0, guess_button_text.get_width() + get_scaled_size(20), padding)
+        guess_button = pygame.Rect(0, 0, guess_button_text.get_width() + pygameWidgets.get_scaled_size(20), padding)
         guess_button.center = (x_offset + grid_px // 2, y_offset + grid_px + 0.75 * padding)
         pygame.draw.rect(__SCREEN, "blue" if can_guess else "grey", guess_button)
         pygame.draw.rect(__SCREEN, "white", guess_button, 1)
@@ -226,70 +226,80 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
     if interactable:
         return buttons, guess_button
 
-def draw_menu() -> tuple[Button, Button, Button]:
+def draw_menu() -> tuple[pygameWidgets.Button, pygameWidgets.Button, pygameWidgets.Button]:
     global __SCREEN
 
     #Titles
-    title_padding = get_scaled_size(50)
-    title = Text(__SCREEN, "ShipWar", (__SCREEN.get_width() // 2, title_padding), font_size=80, padding=title_padding)
+    title_padding = pygameWidgets.get_scaled_size(65)
+    title = pygameWidgets.Text(__SCREEN, "ShipWar", (__SCREEN.get_width() // 2, title_padding), font_size=80, padding=title_padding)
     title.draw()
 
-    subtitle_padding = get_scaled_size(50)
-    subtitle = Text(__SCREEN, "By Joshua Finlayson", (__SCREEN.get_width() // 2, title.padding[1] + title.center[1]), font_size=24, padding=subtitle_padding)
+    subtitle_padding = pygameWidgets.get_scaled_size(50)
+    subtitle = pygameWidgets.Text(__SCREEN, "By Joshua Finlayson", (__SCREEN.get_width() // 2, title.padding[1] + title.center[1]), font_size=18, padding=subtitle_padding)
     subtitle.draw()
 
     #Buttons
-    title_button_dist = get_scaled_size(50)
-    button_padding = get_scaled_size(40)
-    button_button_dist = get_scaled_size(40)
+    title_button_dist = pygameWidgets.get_scaled_size(50)
+    button_padding = pygameWidgets.get_scaled_size(40)
+    button_button_dist = pygameWidgets.get_scaled_size(40)
 
-    play_button = Button(__SCREEN, "Play", (get_scaled_size(200), button_padding), 
+    play_button = pygameWidgets.Button(__SCREEN, "Play", (pygameWidgets.get_scaled_size(200), button_padding), 
                               (__SCREEN.get_width() // 2, subtitle.center[1] + title_button_dist + subtitle.padding[1]), 
-                              fixed_width=True, color="blue", font_size=36)
-    settings_button = Button(__SCREEN, "Settings", (get_scaled_size(200), button_padding), 
+                              fixed_width=True, color="blue", font_size=24)
+    settings_button = pygameWidgets.Button(__SCREEN, "Settings", (pygameWidgets.get_scaled_size(200), button_padding), 
                                   (__SCREEN.get_width() // 2, play_button.center[1] + button_padding + button_button_dist), 
-                                  fixed_width=True, color="blue", font_size=36)
-    quit_button = Button(__SCREEN, "Quit", (get_scaled_size(200), button_padding), 
+                                  fixed_width=True, color="blue", font_size=24)
+    quit_button = pygameWidgets.Button(__SCREEN, "Quit", (pygameWidgets.get_scaled_size(200), button_padding), 
                               (__SCREEN.get_width() // 2, settings_button.center[1] + button_padding + button_button_dist), 
-                              fixed_width=True, color="blue", font_size=36)
+                              fixed_width=True, color="blue", font_size=24)
     play_button.draw()
     settings_button.draw()
     quit_button.draw()
 
     return play_button, settings_button, quit_button
 
-def draw_settings_menu(player_name_entry_field : EntryField) -> tuple[EntryField, Button, Button, Button]:
+def draw_settings_menu(player_name_entry_field : pygameWidgets.EntryField) -> tuple[pygameWidgets.EntryField, pygameWidgets.Button, pygameWidgets.Button, pygameWidgets.Button]:
     global __SCREEN
 
     __SCREEN.fill("black")
-    title_padding = get_scaled_size(50)
+    title_padding = pygameWidgets.get_scaled_size(50)
 
     #Put in title
-    title = Text(__SCREEN, "Settings", (__SCREEN.get_width() // 2, title_padding), font_size=80)
+    title = pygameWidgets.Text(__SCREEN, "Settings", (__SCREEN.get_width() // 2, title_padding), font_size=80)
     title.draw()
 
     #Entry Fields
-    title_entry_field_dist = get_scaled_size(50)
+    title_entry_field_dist = pygameWidgets.get_scaled_size(50)
 
     player_name_entry_field.center = (__SCREEN.get_width() // 2, title.center[1] + title_padding + title_entry_field_dist)
     player_name_entry_field.draw()
 
-    #Buttons
-    entry_button_dist = get_scaled_size(70)
-    button_padding = get_scaled_size(40)
-    button_button_y_dist = get_scaled_size(40)
-    button_button_x_dist =  get_scaled_size(40)
-    button_width = get_scaled_size(250)
+    scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [__SCREEN.get_width() // 2, __SCREEN.get_height() // 2], 
+                      """QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]
+                      RDCVBNJKU YTGBNKIUYTGB RVHR VVI RV VO VWV ERFIWR V
+                      RFIURB RIYROPR VPOV EROV ERIV ER VEOIR V ERVI IV EV RVOR VOE V E VI VV VI  IV VI V E VERHVJRVO EHRV RE HVI EHV HVOUH ERVOI ERHV VOIERHVO ERVPI HE VPHV PIJVPI EVPI RO VIH VOIROV PV HOHV
+                      V IERJVOIRHVP JROIVHOPJRVOHVOJRV IH VJ ERIOV HER VIOER VIEJRVI HREVIJ ERV HE RVERJVIERH VOIR VOJERIOVH ERIV JIOREHVOI ERVJ REIOV HPER JVPOER HVPREJVI RHEVJERIOVHRPE VOIEHRVPIREJPVIHERI OVOREJVOIERHVIPERJV IERVJIRJVOIER VPERJIVOIRH VPER VJEIRO VJERVHIOERHVIR HIRHVIOEHROV ERIOVH EIRO EIRH VOUERH VOIER HVOI HERIOVH ERIV IOERHVIERHVIOER VIE RVHEOIRVJ EIRVERHVOUREHVP RHVIOEJR OIEH RVPOEJRVJER OV PER VER V REIHVER  ERVPREIHVPER VHERPIV EIRVHPER VIERVI EROI
+                      EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE e
+                       Hello World. Eee3"""
+                      , padding=[pygameWidgets.get_scaled_size(15), pygameWidgets.get_scaled_size(15)])
+    scroll.draw()
 
-    default_button = Button(__SCREEN, "Set all to Default", (button_width, button_padding), 
+    #Buttons
+    entry_button_dist = pygameWidgets.get_scaled_size(70)
+    button_padding = pygameWidgets.get_scaled_size(20)
+    button_button_y_dist = pygameWidgets.get_scaled_size(40)
+    button_button_x_dist =  pygameWidgets.get_scaled_size(40)
+    button_width = pygameWidgets.get_scaled_size(250)
+
+    default_button = pygameWidgets.Button(__SCREEN, "Default", (button_width, button_padding), 
                               ((__SCREEN.get_width() - button_width - button_button_x_dist) // 2, player_name_entry_field.center[1] + player_name_entry_field.rect.height + entry_button_dist), 
-                              fixed_width=True, color="blue", font_size=36)
-    save_button = Button(__SCREEN, "Save", (button_width, button_padding), 
+                              fixed_width=True, color="blue", font_size=24)
+    save_button = pygameWidgets.Button(__SCREEN, "Save", (button_width, button_padding), 
                                   ((__SCREEN.get_width() + button_width + button_button_x_dist) // 2, default_button.center[1]), 
-                                  fixed_width=True, color="blue", font_size=36)
-    back_button = Button(__SCREEN, "Back", (button_width, button_padding), 
+                                  fixed_width=True, color="blue", font_size=24)
+    back_button = pygameWidgets.Button(__SCREEN, "Back", (button_width, button_padding), 
                               (__SCREEN.get_width() // 2, save_button.center[1] + button_padding + button_button_y_dist), 
-                              fixed_width=True, color="blue", font_size=36)
+                              fixed_width=True, color="blue", font_size=24)
     default_button.draw()
     save_button.draw()
     back_button.draw()
@@ -300,7 +310,7 @@ def settings() -> None:
     global error_message
     global player_name
 
-    player_name_entry_field = EntryField(__SCREEN, (0, 0), "Player Name: ", font_size=26, title_field_dist=20, input_padding=20, width=250, input_text=player_name)
+    player_name_entry_field = pygameWidgets.EntryField(__SCREEN, (0, 0), "Player Name: ", font_size=26, title_field_dist=20, input_padding=20, width=250, input_text=player_name)
     
     while not error_message:
         player_name_entry_field, default_button, save_button, back_button = draw_settings_menu(player_name_entry_field)
@@ -404,7 +414,6 @@ def main() -> None:
 
     menu()
 
-
 if __name__ == "__main__":
     global error_message
     error_message = ""
@@ -428,6 +437,7 @@ if __name__ == "__main__":
     
     global __SCREEN
     __SCREEN = pygame.display.set_mode((1280, 700), pygame.RESIZABLE)
+    pygameWidgets.SCREEN = __SCREEN
 
     main()
     if error_message: display_error_box()

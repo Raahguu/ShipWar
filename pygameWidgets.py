@@ -1,9 +1,13 @@
 import pygame
 import abc
 
+global SCREEN
+SCREEN = None
+
+
 def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
-    global __SCREEN
-    current_size = current_size if current_size else __SCREEN.get_size()
+    global SCREEN
+    current_size = current_size if current_size else SCREEN.get_size()
     min_size = min_size if min_size else base_size / 3
     max_size = max_size if max_size else base_size * 3
     scale_factor = min(current_size[0] / scale_reference[0], current_size[1] / scale_reference[1])
@@ -26,13 +30,12 @@ class Widget(metaclass=abc.ABCMeta):
         Draw the object to the screen
         """
 
-
 class Text(Widget):
     """
     A class for defining and handling Text in pygame
     """
     def __init__(self, screen : pygame.Surface, inner_text: str, center: list[int, int], 
-                color : str | list[int, int, int] = "white", font_type : str = None, font_size : int = 18, 
+                color : str | list[int, int, int] = "white", font_type : str = 'droid-sans-mono.ttf', font_size : int = 18, 
                 parent : Widget = None, padding : list[int, int] = [0, 0]):
         self.screen = screen
         self.font_type = font_type
@@ -121,14 +124,98 @@ class Text(Widget):
     def draw(self):
         self._calc_surface()
         self.screen.blit(self.surface, self.rect)
+
+class TextArea(Widget):
+    """
+    A class for having multiple lines of text
+    """
+    def __init__(self, screen : pygame.surface, size : list[int, int], center : list[int, int], inner_text : str, text_color : str | list[int, int, int] = "white", 
+                 backdrop_color : str | list[int, int, int] = "black", scrollable : bool = True, scroll_speed : int = 10, 
+                 padding : int | list[int, int] = [0, 0], font_size : int = 18, font_type : str = 'droid-sans-mono.ttf'):
+        self.screen = screen
+        self.size = size
+        self.center = center
+        self.inner_text = inner_text
+        self.text_color = text_color
+        self.backdrop_color = backdrop_color
+        self.scrollable = scrollable
+        self.scroll_speed = scroll_speed
+        self.padding = padding
+        self.font_size = font_size
+        self.font_type = font_type
+        self.scroll_offset = 0
+
+        self._calc_rect()
+        self._calc_wrap_text()
         
+    @property
+    def font(self):
+        return pygame.font.Font(self.font_type, get_scaled_size(self.font_size))
+    @font.setter
+    def font(self, value):
+        raise AttributeError("You need to edit the font_type and font_size seperately")
+
+    def _calc_wrap_text(self):
+        """
+        Calculates the wrapping of text, so that it is segmented into lines that wift within the text area
+        """
+        calculated_text = self.inner_text.strip()
+        text_list = []
+        for i in calculated_text.split():
+            text_list += [[i, self.font.size(i)[0]]]
+
+        max_text_width = get_scaled_size(self.size[0]) - 3 * get_scaled_size(self.padding[0])
+
+        size_of_space = self.font.size(" ")[0]
+        
+        wrapped_text = []
+        length = 0
+        last_i = 0
+        for i, word in enumerate(text_list):
+            #If the word is too long to display by itself
+            if word[1] > max_text_width:
+                for j in range(1, len(word[0])):
+                    part_length = self.font.size(word[0][0:j])[0]
+                    if part_length > max_text_width:
+                        text_list.insert(i + 1, [word[0][j:-1], word[1] - part_length])
+                        word = [word[0][0:j], part_length - size_of_space]
+                        text_list[i] = word
+                        break
+            
+            length += word[1] + size_of_space
+            if length > max_text_width:
+                wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i]]), length - word[1]]]
+                length = word[1]
+                last_i = i
+            elif i == len(text_list) - 1:
+                wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i]]), length - word[1]]]
+        
+        self.wrapped_text = wrapped_text
+    
+    def _calc_rect(self):
+        self.rect = pygame.Rect(0, 0, get_scaled_size(self.size[0]), get_scaled_size(self.size[1]))
+        self.rect.center = [self.center[0], self.center[1]]
+
+    def draw(self):
+        self._calc_wrap_text()
+        self._calc_rect()
+        pygame.draw.rect(self.screen, self.backdrop_color, self.rect)
+        pygame.draw.rect(self.screen, "white", self.rect, 1)
+
+        line_height = self.font.get_height()
+        for i, line in enumerate(self.wrapped_text):
+            text_center = [self.rect.left + get_scaled_size(self.padding[0]) + line[1] // 2, self.rect.top + get_scaled_size(self.padding[1]) + (i + 0.5) * line_height + self.scroll_offset]
+            if text_center[1] < self.rect.top + get_scaled_size(self.padding[0]) or text_center[1] > self.rect.bottom - get_scaled_size(self.padding[1]): continue
+            line_text = Text(self.screen, line[0], text_center, self.text_color, self.font_type, self.font_size)
+            line_text.draw()
+
 class Button(Widget):
     """
     A class for defining and handling Buttons in pygame
     """
     def __init__(self, screen : pygame.surface, inner_text: str, padding: list[int, int] | int, center: list[int, int], 
                 color : str | list[int, int, int] = "black", border_color : str | list[int, int, int] = "white", 
-                text_color : str | list[int, int, int] = "white", font_type : str = None, font_size : int = 18,
+                text_color : str | list[int, int, int] = "white", font_type : str = 'droid-sans-mono.ttf', font_size : int = 18,
                 fixed_width : bool = False, fixed_height : bool = False, have_border : bool = True):
         self.screen = screen
         self.text = Text(screen, inner_text, center, text_color, font_type, font_size, parent=self)
@@ -209,7 +296,6 @@ class Button(Widget):
     def pressed(self, *args):
         return self.rect.collidepoint(*args)
     
-
 class EntryField(Widget):
     class Cursor(Widget):
         def __init__(self, screen : pygame.Surface, visible : bool, editing_text : Text, starting_index : int = None, width : int = 1, color : list[int, int, int] | str = "white", height_padding : int = 5):
@@ -274,7 +360,7 @@ class EntryField(Widget):
             if self.visible: pygame.draw.rect(self.screen, self.color, self.rect)
 
     def __init__(self, screen : pygame.Surface, center : list[int, int], title_text : str = "title", title_field_dist : int = 20, 
-                 text_color : list[int, int, int] | str = "white", font_type : str = None, font_size : int = 26, input_text : str = "", 
+                 text_color : list[int, int, int] | str = "white", font_type : str = 'droid-sans-mono.ttf', font_size : int = 26, input_text : str = "", 
                  input_padding : list[int, int] = [20, 20], width : int = 250, color : list[int, int, int] | str = "grey30",
                  visible_cursor : bool = True, cursor_color : list[int, int, int] | str = "white", cursor_width : int = 1,
                  cursor_height_padding : int = 5): 
@@ -332,8 +418,8 @@ class EntryField(Widget):
         self.rect.center = (self.title.center[0] + self.title.rect.width // 2 + get_scaled_size(self.title_field_dist) + self.rect.width // 2, self.title.center[1])
 
     def draw(self) -> None:
-        self._calc_rect()
         self.title.draw()
+        self._calc_rect()
         pygame.draw.rect(self.screen, self.color, self.rect)
         self.input.draw()
         if self.has_focus: self.cursor.draw()
