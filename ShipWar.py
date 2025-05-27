@@ -11,20 +11,10 @@ def display_error_box() -> None:
     global error_message
     global __SCREEN
 
-    scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [__SCREEN.get_width() // 2, __SCREEN.get_height() // 2], 
-                      """QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]
-                      RDCVBNJKU YTGBNKIUYTGB RVHR VVI RV VO VWV ERFIWR V
-                      RFIURB RIYROPR VPOV EROV ERIV ER VEOIR V ERVI IV EV RVOR VOE V E VI VV VI  IV VI V E VERHVJRVO EHRV RE HVI EHV HVOUH ERVOI ERHV VOIERHVO ERVPI HE VPHV PIJVPI EVPI RO VIH VOIROV PV HOHV
-                      EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE e
-                      Hello World. Eee3 yv lwuwe fwl el QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]
-                      EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE e
-                      Hello World. Eee3 yv lwuwe fwl el QWERTYUI OPASDFGHJKLZXCVBNMQ WERTYUIOP[]ASDFGHJK L;'ZXCVBNM,. /QWERTY UIOP[ASDFGHJK L;ZXCVB NM,./]""" * 3
-                      , padding=[pygameWidgets.get_scaled_size(15), pygameWidgets.get_scaled_size(15)])
-    scroll.draw()
-
-    ok_button = pygameWidgets.Button(__SCREEN, "OK", 10, [scroll.center[0], scroll.center[1] + scroll.size[1] // 2 + 25], "blue")
-
     while True:
+        scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [__SCREEN.get_width() // 2, __SCREEN.get_height() // 2], error_message, padding=[pygameWidgets.get_scaled_size(15), pygameWidgets.get_scaled_size(15)])
+        ok_button = pygameWidgets.Button(__SCREEN, "OK", 10, [scroll.center[0], scroll.center[1] + scroll.size[1] // 2 + 25], "blue")
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -266,7 +256,7 @@ def settings() -> None:
                 #Entry Fields
                 player_name_entry_field.pressed(event.pos)
                 #Buttons
-                if default_button.pressed(event.pos): error_message = "Default yes"
+                if default_button.pressed(event.pos): pass
                 elif save_button.pressed(event.pos):
                     player_name = player_name_entry_field.input.inner_text
                 elif back_button.pressed(event.pos): return
