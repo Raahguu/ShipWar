@@ -11,9 +11,16 @@ def display_error_box() -> None:
     global error_message
     global __SCREEN
 
+    scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [0, 0],
+                                        """ABCDEFGHIJKLMNOPQRTSUVWXYZ""" * 100
+                                        , padding=[15, 15])
+
     while True:
-        scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [__SCREEN.get_width() // 2, __SCREEN.get_height() // 2], error_message, padding=[pygameWidgets.get_scaled_size(15), pygameWidgets.get_scaled_size(15)])
-        ok_button = pygameWidgets.Button(__SCREEN, "OK", 10, [scroll.center[0], scroll.center[1] + scroll.size[1] // 2 + 25], "blue")
+        __SCREEN.fill("black")
+        scroll.center=[__SCREEN.get_width() // 2, __SCREEN.get_height() // 2]
+        scroll.draw()
+        ok_button = pygameWidgets.Button(__SCREEN, "OK", 10, [scroll.center[0], scroll.rect.bottom + pygameWidgets.get_scaled_size(25)], "blue")
+        ok_button.draw()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -25,13 +32,6 @@ def display_error_box() -> None:
                     exit()
             elif event.type == pygame.MOUSEWHEEL:
                 scroll.scroll_bar.scroll(event)
-                
-
-        __SCREEN.fill("black")
-
-        scroll.draw()
-        # Draw OK button
-        ok_button.draw()
 
         pygame.display.flip()
 
@@ -363,7 +363,7 @@ if __name__ == "__main__":
     guess = False
 
     global player_name
-    player_name = "Default"
+    player_name = "Anonymous"
 
     pygame.init()
     

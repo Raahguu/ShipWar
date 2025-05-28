@@ -4,8 +4,7 @@ import abc
 global SCREEN
 SCREEN = None
 
-
-def get_scaled_size(base_size : int, min_size : int = None, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
+def get_scaled_size(base_size : int, min_size : int = 1, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
     global SCREEN
     current_size = current_size if current_size else SCREEN.get_size()
     min_size = min_size if min_size else base_size / 3
@@ -141,6 +140,8 @@ class TextArea(Widget):
             self.scroll_speed = scroll_speed
             self.parent = parent
             self.scroll_offset = scroll_offset
+
+            self._calc_rect()
         
         def _calc_rect(self):
             self.rect = pygame.Rect(self.right - self.size[0], self.scroll_range[0] + self.scroll_offset, self.size[0], self.size[1])
@@ -150,11 +151,10 @@ class TextArea(Widget):
             self.scroll_offset = max(0, min(self.scroll_offset, self.scroll_range[1] - self.scroll_range[0]))
             try: self.parent.scroll_offset = self.scroll_offset
             except: pass
+            self._calc_rect()
         
         def draw(self):
             if self.size[1] > self.scroll_range[1] - self.scroll_range[0]: return
-
-            self._calc_rect()
             pygame.draw.rect(self.screen, self.color, self.rect)
 
     def __init__(self, screen : pygame.surface, size : list[int, int], center : list[int, int], inner_text : str, text_color : str | list[int, int, int] = "white", 
@@ -172,7 +172,6 @@ class TextArea(Widget):
         self.scroll_offset = scroll_offset
         self.scroll_bar_width = scroll_bar_width
 
-        self._calc_rect()
         self._calc_wrap_text()
         
     @property
@@ -181,6 +180,115 @@ class TextArea(Widget):
     @font.setter
     def font(self, value):
         raise AttributeError("You need to edit the font_type and font_size seperately")
+    
+    @property
+    def screen(self) -> pygame.Surface:
+        return self.__screen
+    @screen.setter
+    def screen(self, value : pygame.Surface):
+        self.__screen = value
+        self._calc_wrap_text()
+
+    @property
+    def size(self) -> list[int, int]:
+        try: return self.__size
+        except: return [0, 0]
+    @size.setter
+    def size(self, value : list[int, int]):
+        if type(value) not in [list, tuple] or len(value) != 2: raise TypeError(f"The size must be a list of two integers, not a {type(value)}")
+        self.__size = list(value)
+        self._calc_wrap_text()
+
+    @property
+    def center(self) -> list[int, int]:
+        try: return self.__center
+        except: return [0, 0]
+    @center.setter
+    def center(self, value : list[int, int]):
+        if type(value) not in [list, tuple] or len(value) != 2: raise TypeError(f"The center must be a list of two integers, not a {type(value)}")
+        self.__center = list(value)
+        self._calc_text_centers()
+    
+    @property
+    def inner_text(self) -> str:
+        try: return self.__inner_text
+        except: return "e"
+    @inner_text.setter
+    def inner_text(self, value : str):
+        self.__inner_text = str(value)
+        self._calc_wrap_text()
+    
+    @property
+    def text_color(self) -> list[int, int, int] | str:
+        try: return self.__text_color
+        except: return "white"
+    @text_color.setter
+    def text_color(self, value : list[int, int, int] | str):
+        if type(value) not in [str, list, tuple] or type(value) in [list, tuple] and len(value) != 3: raise TypeError(f"The text_color must be a list of three integers or a string, not a {type(value)}")
+        if type(value) == tuple: value = list(value)
+        self.__text_color = value
+        self._calc_wrap_text()
+    
+    @property
+    def backdrop_color(self) -> list[int, int, int] | str:
+        try: return self.__backdrop_color
+        except: return "black"
+    @backdrop_color.setter
+    def backdrop_color(self, value : list[int, int, int] | str):
+        if type(value) not in [str, list, tuple] or type(value) in [list, tuple] and len(value) != 3: raise TypeError(f"The size must be a list of three integers or a string, not a {type(value)}")
+        if type(value) == tuple: value = list(value)
+        self.__backdrop_color = value
+        self._calc_wrap_text()
+    
+    @property
+    def padding(self) -> list[int, int]:
+        try: return self.__padding
+        except: return [0, 0]
+    @padding.setter
+    def padding(self, value : list[int, int] | int):
+        if type(value) == int: value = [value, value]
+        self.__padding = value
+        self._calc_wrap_text()
+    
+    @property
+    def font_size(self) -> int:
+        try: return self.__font_size
+        except: return 12
+    @font_size.setter
+    def font_size(self, value : int):
+        if type(value) != int or value <= 0: raise TypeError("The font_size must be an integer greater than 0")
+        self.__font_size = value
+        self._calc_wrap_text()
+    
+    @property
+    def font_type(self) -> str:
+        try: return self.__font_type
+        except: return "droid-sans-mono.ttf"
+    @font_type.setter
+    def font_type(self, value : str):
+        if type(value) not in [str, None]: raise TypeError("The font_type must be a string, or 'None'")
+        try: pygame.font.Font(value, self.font_size)
+        except: raise AttributeError("Font type invalid")
+        self.__font_type = value
+        self._calc_wrap_text()
+    
+    @property
+    def scroll_offset(self) -> int:
+        try: return self.__scroll_offset
+        except: return 0
+    @scroll_offset.setter
+    def scroll_offset(self, value : int):
+        if type(value) != int: raise TypeError("The scroll_offset must be an int")
+        self.__scroll_offset = value
+        self._calc_wrap_text()
+    
+    @property
+    def scroll_bar_width(self) -> int:
+        try: return self.__scroll_bar_width
+        except: return 0
+    @scroll_bar_width.setter
+    def scroll_bar_width(self, value : int):
+        self.__scroll_bar_width = value
 
     def _calc_wrap_text(self):
         """
@@ -218,29 +326,40 @@ class TextArea(Widget):
                 wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i + 1]]), length]]
         
         self.wrapped_text = wrapped_text
+        self._calc_rect()
+        self._calc_scroll_bar()
     
     def _calc_scroll_bar(self):
         self.scroll_bar = TextArea.scrollBar(self.screen, [get_scaled_size(self.scroll_bar_width), self.size[1] ** 2 / (len(self.wrapped_text) * self.font.get_height())], 
-                                             self.rect.right, [self.rect.top, self.rect.bottom], len(self.wrapped_text), 
-                                             visible=(len(self.wrapped_text) * self.font.get_height() + 2*self.padding[1] > self.size[1]), parent=self, scroll_offset=self.scroll_offset)
+                                             self.rect.right, [self.rect.top, self.rect.bottom],
+                                             visible=(len(self.wrapped_text) * self.font.get_height() + 2*get_scaled_size(self.padding[1]) > self.size[1]), parent=self, scroll_offset=self.scroll_offset)
 
     def _calc_rect(self):
         self.rect = pygame.Rect(0, 0, get_scaled_size(self.size[0]), get_scaled_size(self.size[1]))
         self.rect.center = [self.center[0], self.center[1]]
+        self._calc_texts()
+    
+    def _calc_texts(self):
+        text_lines : list[Text] = []
+        for line in self.wrapped_text:
+            line_text = Text(self.screen, line[0], [0, 0], self.text_color, self.font_type, self.font_size)
+            text_lines += [line_text]
+        self.text_lines = text_lines
+        self._calc_text_centers()
+
+    def _calc_text_centers(self):
+        line_height = self.font.get_height()
+        for i, line in enumerate(self.text_lines):
+            text_center = [self.rect.left + get_scaled_size(self.padding[0]) + line.rect.width // 2, self.rect.top + get_scaled_size(self.padding[1]) + (i + 0.5) * line_height - self.scroll_offset]
+            line.center = text_center
 
     def draw(self):
-        self._calc_wrap_text()
-        self._calc_rect()
-        self._calc_scroll_bar()
         pygame.draw.rect(self.screen, self.backdrop_color, self.rect)
-        pygame.draw.rect(self.screen, "white", self.rect, 1)
+        pygame.draw.rect(self.screen, "red", self.rect, 1)
 
-        line_height = self.font.get_height()
-        for i, line in enumerate(self.wrapped_text):
-            text_center = [self.rect.left + get_scaled_size(self.padding[0]) + line[1] // 2, self.rect.top + get_scaled_size(self.padding[1]) + (i + 0.5) * line_height - self.scroll_offset]
-            if text_center[1] < self.rect.top + get_scaled_size(self.padding[0]) or text_center[1] > self.rect.bottom - get_scaled_size(self.padding[1]): continue
-            line_text = Text(self.screen, line[0], text_center, self.text_color, self.font_type, self.font_size)
-            line_text.draw()
+        for line in self.text_lines:
+            if line.center[1] < self.rect.top + get_scaled_size(self.padding[0]) or line.center[1] > self.rect.bottom - get_scaled_size(self.padding[1]): continue
+            line.draw()
         
         self.scroll_bar.draw()
 
