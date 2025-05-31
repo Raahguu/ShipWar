@@ -393,6 +393,8 @@ class Button(Widget):
                 color : str | list[int, int, int] = "black", border_color : str | list[int, int, int] = "white", 
                 text_color : str | list[int, int, int] = "white", font_type : str = 'droid-sans-mono.ttf', font_size : int = 18,
                 fixed_width : bool = False, fixed_height : bool = False, have_border : bool = True):
+        self._block_calcs = True
+        
         self.screen = screen
         self.text = Text(screen, inner_text, center, text_color, font_type, font_size, parent=self)
 
@@ -406,6 +408,7 @@ class Button(Widget):
         self.fixed_width = fixed_width
         self.fixed_height = fixed_height
 
+        self._block_calcs = False
         self._calc_rect()
 
     @property
@@ -428,7 +431,7 @@ class Button(Widget):
         if type(value) is int: value = [value, value]
         if type(value) is tuple: value = list(value)
         self.__padding = value
-        self._calc_rect()
+        if not self._block_calcs: self._calc_rect()
     
     @property
     def center(self) -> list[int, int]:
@@ -438,7 +441,7 @@ class Button(Widget):
     def center(self, value : list[int, int]):
         if type(value) not in (tuple, list) or len(value) != 2: raise TypeError(f"The center can only either be an tuple, or a list of two ints for the x, and y values; not a {type(value)}")
         self.__center = list(value)
-        self._calc_rect()
+        if not self._block_calcs: self._calc_rect()
 
     @property
     def fixed_width(self) -> bool:
@@ -447,7 +450,7 @@ class Button(Widget):
     @fixed_width.setter
     def fixed_width(self, value : bool):
         self.__fixed_width = bool(value)
-        self._calc_rect()
+        if not self._block_calcs: self._calc_rect()
 
     @property
     def fixed_height(self) -> bool:
@@ -456,7 +459,7 @@ class Button(Widget):
     @fixed_height.setter
     def fixed_height(self, value : bool):
         self.__fixed_height = bool(value)
-        self._calc_rect()
+        if not self._block_calcs: self._calc_rect()
        
     def _calc_rect(self) -> None:
         self.rect = pygame.Rect(0, 0, (self.text.surface.get_width() if not self.fixed_width else 0) + get_scaled_size(self.padding[0]), 
@@ -475,6 +478,8 @@ class Button(Widget):
 class EntryField(Widget):
     class Cursor(Widget):
         def __init__(self, screen : pygame.Surface, visible : bool, editing_text : Text, starting_index : int = None, width : int = 1, color : list[int, int, int] | str = "white", height_padding : int = 5):
+            self._block_calcs = True
+
             self.screen = screen
             self.visible = visible
             self.editing_text = editing_text
@@ -482,6 +487,9 @@ class EntryField(Widget):
             self.color = color
             self.index = starting_index
             self.height_padding = height_padding
+
+            self._block_calcs = False
+            self._calc_rect()
         
         @property
         def width(self):
@@ -491,7 +499,7 @@ class EntryField(Widget):
         def width(self, value : int):
             if type(value) != int or value < 0: raise TypeError("The Entry Fields Cursor's width needs to be an integer greater than or equal to 0")
             self.__width = value
-            self._calc_rect()
+            if not self._block_calcs: self._calc_rect()
 
         @property
         def index(self):
@@ -504,7 +512,7 @@ class EntryField(Widget):
             if value < 0: value = 0
             if value > len(self.editing_text.inner_text): value = len(self.editing_text.inner_text)
             self.__index = value
-            self._calc_rect()
+            if not self._block_calcs: self._calc_rect()
 
         @property
         def height_padding(self) -> int:
@@ -516,7 +524,7 @@ class EntryField(Widget):
             if type(value) != int: raise TypeError("The Entry Fields Cursor's height padding needs to be an integer")
             if value < 0: value = 0
             self.__height_padding = value
-            self._calc_rect()
+            if not self._block_calcs: self._calc_rect()
 
         @property
         def editting_text(self):
@@ -525,7 +533,7 @@ class EntryField(Widget):
         def editting_text(self, value : Text):
             if type(value) != Text: raise TypeError("The Entry Fields Cursor's editting_text needs to be of the type Text")
             self.__editting_text = value
-            self._calc_rect()
+            if not self._block_calcs: self._calc_rect()
 
         def _calc_rect(self):
             self.rect = pygame.Rect(0, 0, get_scaled_size(self.width), self.editing_text.rect.height + get_scaled_size(self.height_padding))
@@ -540,6 +548,8 @@ class EntryField(Widget):
                  input_padding : list[int, int] = [20, 20], width : int = 250, color : list[int, int, int] | str = "grey30",
                  visible_cursor : bool = True, cursor_color : list[int, int, int] | str = "white", cursor_width : int = 1,
                  cursor_height_padding : int = 5): 
+        self._block_calcs = True
+        
         self.screen = screen
         self.has_focus = False
         self.title_field_dist = title_field_dist
@@ -552,6 +562,7 @@ class EntryField(Widget):
         self.center = center
         self.width = width
 
+        self._block_calcs = False
         self._calc_rect()
 
     @property
@@ -587,7 +598,7 @@ class EntryField(Widget):
     def width(self, value : int):
         if type(value) != int or value < 0: raise TypeError("The Width must be an int greater than or equal to 0")
         self.__width = value
-        self._calc_rect()
+        if not self._block_calcs: self._calc_rect()
 
     def _calc_rect(self):
         self.rect = pygame.Rect(0, 0, get_scaled_size(self.width), self.input.rect.height + get_scaled_size(self.input.padding[1]))
