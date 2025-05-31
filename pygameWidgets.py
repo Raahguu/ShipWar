@@ -333,7 +333,7 @@ class TextArea(Widget):
                 for j in range(1, len(word[0])):
                     part_length = self.font.size(word[0][0:j])[0]
                     if part_length > max_text_width:
-                        text_list.insert(i + 1, [word[0][j:-1], word[1] - part_length - size_of_space])
+                        text_list.insert(i + 1, [word[0][j:], word[1] - part_length - size_of_space])
                         word = [word[0][0:j], part_length]
                         text_list[i] = word
                         break
