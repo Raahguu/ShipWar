@@ -12,7 +12,7 @@ def display_error_box() -> None:
     global __SCREEN
 
     scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [0, 0],
-                                        """ABCDEFGHIJKLMNOPQRTSUVWXYZ""" * 100
+                                        """ABCDEFGHIJKLMNOPQRTSUVWXYZ""" * 150 + " Hello World"
                                         , padding=[15, 15])
 
     while True:

@@ -139,18 +139,25 @@ class TextArea(Widget):
             self.visible = visible
             self.scroll_speed = scroll_speed
             self.parent = parent
-            self.scroll_offset = scroll_offset
+            self.__scroll_offset = self._undo_calc_scroll_offset_in_window(scroll_offset)
+            self.__bar_scroll_offset = self._calc_scroll_offset_in_window(self.__scroll_offset)
 
             self._calc_rect()
         
+        def _calc_scroll_offset_in_window(self, offset):
+            return offset / (self.scroll_range[1] - self.scroll_range[0]) * (len(self.parent.wrapped_text) * self.parent.font.get_height() + 2*get_scaled_size(self.parent.padding[1]))
+
+        def _undo_calc_scroll_offset_in_window(self, offset):
+            return offset * (self.scroll_range[1] - self.scroll_range[0]) / (len(self.parent.wrapped_text) * self.parent.font.get_height() + 2*get_scaled_size(self.parent.padding[1]))
+
         def _calc_rect(self):
-            self.rect = pygame.Rect(self.right - self.size[0], self.scroll_range[0] + self.scroll_offset, self.size[0], self.size[1])
+            self.rect = pygame.Rect(self.right - self.size[0], self.scroll_range[0] + self.__scroll_offset, self.size[0], self.size[1])
 
         def scroll(self, event : pygame.event.Event):
-            self.scroll_offset -= event.y * self.scroll_speed
-            self.scroll_offset = max(0, min(self.scroll_offset, self.scroll_range[1] - self.scroll_range[0]))
-            try: self.parent.scroll_offset = self.scroll_offset
-            except: pass
+            self.__scroll_offset -= event.y * self.scroll_speed
+            self.__scroll_offset = max(0, min(self.__scroll_offset, self.scroll_range[1] - self.scroll_range[0] - self.size[1] + 1))
+            self.__bar_scroll_offset = int(self._calc_scroll_offset_in_window(self.__scroll_offset))
+            self.parent.scroll_offset = self.__bar_scroll_offset
             self._calc_rect()
         
         def draw(self):
@@ -192,7 +199,7 @@ class TextArea(Widget):
     @property
     def size(self) -> list[int, int]:
         try: return self.__size
-        except: return [0, 0]
+        except: return [1, 1]
     @size.setter
     def size(self, value : list[int, int]):
         if type(value) not in [list, tuple] or len(value) != 2: raise TypeError(f"The size must be a list of two integers, not a {type(value)}")
@@ -207,7 +214,9 @@ class TextArea(Widget):
     def center(self, value : list[int, int]):
         if type(value) not in [list, tuple] or len(value) != 2: raise TypeError(f"The center must be a list of two integers, not a {type(value)}")
         self.__center = list(value)
+        self._calc_rect()
         self._calc_text_centers()
+        self._calc_scroll_bar()
     
     @property
     def inner_text(self) -> str:
@@ -280,12 +289,12 @@ class TextArea(Widget):
     def scroll_offset(self, value : int):
         if type(value) != int: raise TypeError("The scroll_offset must be an int")
         self.__scroll_offset = value
-        self._calc_wrap_text()
+        self._calc_text_centers()
     
     @property
     def scroll_bar_width(self) -> int:
         try: return self.__scroll_bar_width
-        except: return 0
+        except: return 1
     @scroll_bar_width.setter
     def scroll_bar_width(self, value : int):
         self.__scroll_bar_width = value
@@ -330,7 +339,7 @@ class TextArea(Widget):
         self._calc_scroll_bar()
     
     def _calc_scroll_bar(self):
-        self.scroll_bar = TextArea.scrollBar(self.screen, [get_scaled_size(self.scroll_bar_width), self.size[1] ** 2 / (len(self.wrapped_text) * self.font.get_height())], 
+        self.scroll_bar = TextArea.scrollBar(self.screen, [get_scaled_size(self.scroll_bar_width), self.size[1] ** 2 // (len(self.wrapped_text) * self.font.get_height())], 
                                              self.rect.right, [self.rect.top, self.rect.bottom],
                                              visible=(len(self.wrapped_text) * self.font.get_height() + 2*get_scaled_size(self.padding[1]) > self.size[1]), parent=self, scroll_offset=self.scroll_offset)
 
