@@ -174,6 +174,8 @@ class TextArea(Widget):
     def __init__(self, screen : pygame.surface, size : list[int, int], center : list[int, int], inner_text : str, text_color : str | list[int, int, int] = "white", 
                  backdrop_color : str | list[int, int, int] = "black", scroll_bar_width : int = 5, scroll_offset : int = 0,
                  padding : int | list[int, int] = [0, 0], font_size : int = 18, font_type : str = 'droid-sans-mono.ttf'):
+        self._block_calcs = True
+        
         self.screen = screen
         self.size = size
         self.center = center
@@ -186,6 +188,7 @@ class TextArea(Widget):
         self.scroll_offset = scroll_offset
         self.scroll_bar_width = scroll_bar_width
 
+        self._block_calcs = False
         self._calc_wrap_text()
         
     @property
@@ -201,7 +204,7 @@ class TextArea(Widget):
     @screen.setter
     def screen(self, value : pygame.Surface):
         self.__screen = value
-        self._calc_wrap_text()
+        if not self._block_calcs: self._calc_wrap_text()
 
     @property
     def size(self) -> list[int, int]:
@@ -211,7 +214,7 @@ class TextArea(Widget):
     def size(self, value : list[int, int]):
         if type(value) not in [list, tuple] or len(value) != 2: raise TypeError(f"The size must be a list of two integers, not a {type(value)}")
         self.__size = list(value)
-        self._calc_wrap_text()
+        if not self._block_calcs: self._calc_wrap_text()
 
     @property
     def center(self) -> list[int, int]:
@@ -221,9 +224,10 @@ class TextArea(Widget):
     def center(self, value : list[int, int]):
         if type(value) not in [list, tuple] or len(value) != 2: raise TypeError(f"The center must be a list of two integers, not a {type(value)}")
         self.__center = list(value)
-        self._calc_rect()
-        self._calc_text_centers()
-        self._calc_scroll_bar()
+        if not self._block_calcs: 
+            self._calc_rect() 
+            self._calc_text_centers()
+            self._calc_scroll_bar()
     
     @property
     def inner_text(self) -> str:
@@ -232,7 +236,7 @@ class TextArea(Widget):
     @inner_text.setter
     def inner_text(self, value : str):
         self.__inner_text = str(value)
-        self._calc_wrap_text()
+        if not self._block_calcs: self._calc_wrap_text()
     
     @property
     def text_color(self) -> list[int, int, int] | str:
@@ -243,7 +247,7 @@ class TextArea(Widget):
         if type(value) not in [str, list, tuple] or type(value) in [list, tuple] and len(value) != 3: raise TypeError(f"The text_color must be a list of three integers or a string, not a {type(value)}")
         if type(value) == tuple: value = list(value)
         self.__text_color = value
-        self._calc_wrap_text()
+        if not self._block_calcs: self._calc_wrap_text()
     
     @property
     def backdrop_color(self) -> list[int, int, int] | str:
@@ -254,7 +258,7 @@ class TextArea(Widget):
         if type(value) not in [str, list, tuple] or type(value) in [list, tuple] and len(value) != 3: raise TypeError(f"The size must be a list of three integers or a string, not a {type(value)}")
         if type(value) == tuple: value = list(value)
         self.__backdrop_color = value
-        self._calc_wrap_text()
+        if not self._block_calcs: self._calc_wrap_text()
     
     @property
     def padding(self) -> list[int, int]:
@@ -264,7 +268,7 @@ class TextArea(Widget):
     def padding(self, value : list[int, int] | int):
         if type(value) == int: value = [value, value]
         self.__padding = value
-        self._calc_wrap_text()
+        if not self._block_calcs: self._calc_wrap_text()
     
     @property
     def font_size(self) -> int:
@@ -274,7 +278,7 @@ class TextArea(Widget):
     def font_size(self, value : int):
         if type(value) != int or value <= 0: raise TypeError("The font_size must be an integer greater than 0")
         self.__font_size = value
-        self._calc_wrap_text()
+        if not self._block_calcs: self._calc_wrap_text()
     
     @property
     def font_type(self) -> str:
@@ -286,7 +290,7 @@ class TextArea(Widget):
         try: pygame.font.Font(value, self.font_size)
         except: raise AttributeError("Font type invalid")
         self.__font_type = value
-        self._calc_wrap_text()
+        if not self._block_calcs: self._calc_wrap_text()
     
     @property
     def scroll_offset(self) -> int:
@@ -296,7 +300,7 @@ class TextArea(Widget):
     def scroll_offset(self, value : int):
         if type(value) != int: raise TypeError("The scroll_offset must be an int")
         self.__scroll_offset = value
-        self._calc_text_centers()
+        if not self._block_calcs: self._calc_text_centers()
     
     @property
     def scroll_bar_width(self) -> int:
@@ -305,6 +309,7 @@ class TextArea(Widget):
     @scroll_bar_width.setter
     def scroll_bar_width(self, value : int):
         self.__scroll_bar_width = value
+        if not self._block_calcs: self._calc_scroll_bar()
 
     def _calc_wrap_text(self):
         """
@@ -342,6 +347,7 @@ class TextArea(Widget):
                 wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i + 1]]), length]]
         
         self.wrapped_text = wrapped_text
+        print(self.wrapped_text)
         self._calc_rect()
         self._calc_scroll_bar()
     
