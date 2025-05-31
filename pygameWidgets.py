@@ -347,14 +347,13 @@ class TextArea(Widget):
                 wrapped_text += [[" ".join([j[0] for j in text_list[last_i:i + 1]]), length]]
         
         self.wrapped_text = wrapped_text
-        print(self.wrapped_text)
         self._calc_rect()
         self._calc_scroll_bar()
     
     def _calc_scroll_bar(self):
-        self.scroll_bar = TextArea.scrollBar(self.screen, [get_scaled_size(self.scroll_bar_width), self.size[1] ** 2 // (len(self.wrapped_text) * self.font.get_height())], 
+        self.scroll_bar = TextArea.scrollBar(self.screen, [get_scaled_size(self.scroll_bar_width), get_scaled_size(self.size[1]) ** 2 // (len(self.wrapped_text) * self.font.get_height())], 
                                              self.rect.right, [self.rect.top, self.rect.bottom],
-                                             visible=(len(self.wrapped_text) * self.font.get_height() + 2*get_scaled_size(self.padding[1]) > self.size[1]), parent=self, scroll_offset=self.scroll_offset)
+                                             visible=(len(self.wrapped_text) * self.font.get_height() + 2*get_scaled_size(self.padding[1]) > get_scaled_size(self.size[1])), parent=self, scroll_offset=self.scroll_offset)
 
     def _calc_rect(self):
         self.rect = pygame.Rect(0, 0, get_scaled_size(self.size[0]), get_scaled_size(self.size[1]))
