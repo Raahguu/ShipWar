@@ -12,7 +12,7 @@ def display_error_box() -> None:
     global __SCREEN
 
     scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [0, 0],
-                                        "".join([f"{i}ABCDEFGHIJKLMNOPQRSTUVWXYZ" for i in range(150)]) + " Hello World"
+                                        error_message
                                         , padding=[15, 15])
 
     while True:
@@ -44,7 +44,6 @@ async def handle_server():
     try:
         ws_connection = await websockets.connect(server_uri + ":" + server_port)
         reply = json.loads(await ws_connection.recv())
-        print(reply)
     except Exception as e:
         error_message = f"Could not connect to server: {str(e)}"
         return
