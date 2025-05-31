@@ -36,6 +36,8 @@ class Text(Widget):
     def __init__(self, screen : pygame.Surface, inner_text: str, center: list[int, int], 
                 color : str | list[int, int, int] = "white", font_type : str = 'droid-sans-mono.ttf', font_size : int = 18, 
                 parent : Widget = None, padding : list[int, int] = [0, 0]):
+        self._block_calc = True
+
         self.screen = screen
         self.font_type = font_type
         self.font_size = font_size
@@ -46,6 +48,9 @@ class Text(Widget):
         self.__parent = parent
         self.padding = padding
 
+        self._block_calc = False
+        self._calc_surface()
+
     @property
     def inner_text(self) -> str:
         try: return self.__inner_text
@@ -53,7 +58,7 @@ class Text(Widget):
     @inner_text.setter
     def inner_text(self, value : str):
         self.__inner_text = str(value)
-        self._calc_surface()
+        if not self._block_calc: self._calc_surface()
 
     @property
     def color(self) -> list[int, int, int] | str:
@@ -62,7 +67,7 @@ class Text(Widget):
     @color.setter
     def color(self, value : list[int, int, int] | str):
         self.__color = value
-        self._calc_surface()
+        if not self._block_calc: self._calc_surface()
 
     @property
     def center(self) -> list[int, int]:
@@ -71,7 +76,7 @@ class Text(Widget):
     @center.setter
     def center(self, value : list[int, int]):
         self.__center = value
-        self._calc_rect()
+        if not self._block_calc: self._calc_rect()
 
     @property
     def font_size(self) -> int:
@@ -82,6 +87,7 @@ class Text(Widget):
         if type(value) != int: raise TypeError("The font size of text must be an integer")
         if value < 0: raise ValueError("The font size of text must be greater then 0")
         self.__font_size = value
+        if not self._block_calc: self._calc_surface()
     
     @property
     def font_type(self) -> str:
@@ -91,6 +97,7 @@ class Text(Widget):
     def font_type(self, value : str):
         pygame.font.Font(value, self.font_size)
         self.__font_type = value
+        if not self._block_calc: self._calc_surface()
 
     @property
     def font(self) -> pygame.font.Font:
