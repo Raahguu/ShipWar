@@ -87,37 +87,31 @@ def start_async_server_handling():
     asyncio.run(handle_server())
         	
 #Client logic
-def draw_game_board() -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect]:
+def draw_game_board() -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button]:
     pygame.font.init()
-    font = pygame.font.Font(None, pygameWidgets.get_scaled_size(24))
+    font_size= 24
     padding = pygameWidgets.get_scaled_size(50)
 
     # Left board - Radar (shots fired)
-    radar_buttons, guess_button = draw_grid(LEFT_TOP=(0, 0), title="Radar", label=True, font=font, padding=padding, interactable=True, guessed=user_guessed_squares)
+    radar_buttons, guess_button = draw_grid(LEFT_TOP=(0, 0), title="Radar", label=True, font_size=font_size, padding=padding, interactable=True, guessed=user_guessed_squares)
 
     # Right board - Player's ships
     right_x = __SCREEN.get_width() // 2
-    draw_grid(LEFT_TOP=(right_x, 0), title="Game Board", label=True, font=font, padding=padding, guessed=enemy_guessed_squares)
+    draw_grid(LEFT_TOP=(right_x, 0), title="Game Board", label=True, font_size=font_size, padding=padding, guessed=enemy_guessed_squares)
 
     return radar_buttons, guess_button
 
-def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, padding=0, 
-              interactable=False, guessed=None) -> tuple[list[list[pygame.rect.Rect]], pygame.rect.Rect] | None:
-    if not font: font = pygame.font.Font(None, pygameWidgets.get_scaled_size(24))
+def draw_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = None, padding=0, 
+              interactable=False, guessed=None) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button] | None:
+    if not font_size: font_size = 24
 
-    x_offset, y_offset = LEFT_TOP
-    x_offset += padding
-    y_offset += padding
-
-    CELL_SIZE = min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 3 * padding) // GRID_SIZE
+    CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 3 * padding) // GRID_SIZE)
     grid_px = CELL_SIZE * GRID_SIZE
 
     # Title
     if title:
-        text = font.render(title, True, (255, 255, 255))
-        text_rect = text.get_rect(center=(x_offset + grid_px // 2, y_offset - padding // 2))
-        __SCREEN.blit(text, text_rect)
-        y_offset += text.get_height() * 2
+        title_text = pygameWidgets.Text(__SCREEN, title, (LEFT_TOP[0] + grid_px // 2 + padding, LEFT_TOP[1] + padding // 2), font_size=font_size)
+        title_text.draw()
 
     buttons = [[None] * GRID_SIZE for i in range(GRID_SIZE)]
 
@@ -126,14 +120,14 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
     for row in range(GRID_SIZE):
         for col in range(GRID_SIZE):
             #buttons
-            button_rect = pygame.Rect(x_offset + col * CELL_SIZE, y_offset + row * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-            pygame.draw.rect(__SCREEN, (0, 0, 0), button_rect)
-            pygame.draw.rect(__SCREEN, (100, 100, 100), button_rect, 1)
-            buttons[row][col] = button_rect
+            button = pygameWidgets.Button(__SCREEN, "", CELL_SIZE, [title_text.center[0] - grid_px // 2 + (col + 0.5) * CELL_SIZE, title_text.rect.bottom + title_text.rect.height + (row + 0.5) * CELL_SIZE], 
+                                          "black", fixed_height=True, fixed_width=True, border_color=(100, 100, 100))
+            button.draw()
+            buttons[row][col] = button
             
             #Pegs
-            cx = x_offset + (col + 0.5) * CELL_SIZE
-            cy = y_offset + (row + 0.5) * CELL_SIZE
+            cx = buttons[0][0].rect.left + (col + 0.5) * CELL_SIZE
+            cy = buttons[0][0].rect.top + (row + 0.5) * CELL_SIZE
 
             if guessed:
                 match guessed[row][col]:
@@ -146,23 +140,16 @@ def draw_grid(LEFT_TOP, title="", label=False, font : pygame.font.Font = None, p
     #Write board locations:
     if label: 
         for i in range(GRID_SIZE):
-            text = font.render(f"ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i], True, "white")
-            text_rect = text.get_rect(center=(x_offset - padding // 2, y_offset + (i + 0.5) * CELL_SIZE))
-            __SCREEN.blit(text, text_rect)
+            row_num = pygameWidgets.Text(__SCREEN, f"ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i], [title_text.center[0] - grid_px // 2 - padding // 2, title_text.rect.bottom + title_text.rect.height + (i + 0.5) * CELL_SIZE])
+            row_num.draw()
 
-            text = font.render(f"{i+1}", True, "white")
-            text_rect = text.get_rect(center=(x_offset + (i + 0.5) * CELL_SIZE, y_offset - padding // 2))
-            __SCREEN.blit(text, text_rect)
+            col_num = pygameWidgets.Text(__SCREEN, f"{i + 1}", [title_text.center[0] - grid_px // 2 + (i + 0.5) * CELL_SIZE, title_text.rect.bottom + title_text.rect.height - padding // 2])
+            col_num.draw()
     
     #Confirm guess button
     if interactable and guessed:
-        guess_button_text = font.render("Confirm Guess", True, "white")
-        guess_button = pygame.Rect(0, 0, guess_button_text.get_width() + pygameWidgets.get_scaled_size(20), padding)
-        guess_button.center = (x_offset + grid_px // 2, y_offset + grid_px + 0.75 * padding)
-        pygame.draw.rect(__SCREEN, "blue" if can_guess else "grey", guess_button)
-        pygame.draw.rect(__SCREEN, "white", guess_button, 1)
-        text_rect = guess_button_text.get_rect(center=guess_button.center)
-        __SCREEN.blit(guess_button_text, text_rect)
+        guess_button = pygameWidgets.Button(__SCREEN, "Confirm Guess", 20, [title_text.center[0], title_text.rect.bottom + title_text.rect.height + grid_px + 0.75 * padding], "blue" if can_guess else "grey")
+        guess_button.draw()
 
     if interactable:
         return buttons, guess_button
@@ -306,12 +293,12 @@ def game() -> None:
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for row in range(len(radar_buttons)):
                     for col in range(len(radar_buttons[row])):
-                        if radar_buttons[row][col].collidepoint(event.pos):
+                        if radar_buttons[row][col].pressed(event.pos):
                             if user_guessed_squares[row][col] != 0: break
                             if last_guess: user_guessed_squares[last_guess[0]][last_guess[1]] = 0
                             last_guess = [row, col]
                             user_guessed_squares[row][col] = 4
-                if last_guess and guess_button.collidepoint(event.pos):
+                if last_guess and guess_button.pressed(event.pos):
                     guess = [last_guess[0], last_guess[1]]
                     last_guess = []
             elif event.type == pygame.KEYDOWN:
