@@ -68,12 +68,15 @@ async def handle_server():
                 error_message = f"Failed to send guess: {str(e)}"
                 return
             
-            reply = json.loads(await ws_connection.recv())
-            if reply["type"] == "guess_result":
-                user_guessed_squares[guess[0]][guess[1]] = reply["result"]
-            else: 
+            try:
+                reply = json.loads(await ws_connection.recv())
+                if reply["type"] == "guess_result":
+                    user_guessed_squares[guess[0]][guess[1]] = reply["result"]
+                else: 
+                    error_message = f"Server Error {str(e)}"
+            except Exception as e:
                 error_message = f"Server Error {str(e)}"
-       	    
+                   	    
             guess = False
             
             # reply = json.loads(await ws_connection.recv())
@@ -87,22 +90,44 @@ def start_async_server_handling():
     asyncio.run(handle_server())
         	
 #Client logic
-def draw_game_board() -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button]:
-    pygame.font.init()
+def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
     font_size= 24
-    padding = pygameWidgets.get_scaled_size(50)
+
+    #Draw Background
+    __SCREEN.fill((0, 0, 0)) 
 
     # Left board - Radar (shots fired)
-    radar_buttons, guess_button = draw_grid(LEFT_TOP=(0, 0), title="Radar", label=True, font_size=font_size, padding=padding, interactable=True, guessed=user_guessed_squares)
+    radar_buttons, guess_button = setup_grid(LEFT_TOP=(0, 0), title="Radar", label=True, font_size=font_size, padding=padding, interactable=True, guessed=user_guessed_squares)
 
     # Right board - Player's ships
     right_x = __SCREEN.get_width() // 2
-    draw_grid(LEFT_TOP=(right_x, 0), title="Game Board", label=True, font_size=font_size, padding=padding, guessed=enemy_guessed_squares)
+    enemy_buttons =  setup_grid(LEFT_TOP=(right_x, 0), title="Game Board", label=True, font_size=font_size, padding=padding, guessed=enemy_guessed_squares)[0]
 
-    return radar_buttons, guess_button
+    return radar_buttons, guess_button, enemy_buttons
 
-def draw_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = None, padding=0, 
-              interactable=False, guessed=None) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button] | None:
+def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_button : pygameWidgets.Button = None, guessed=None):
+    CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 3 * padding) // GRID_SIZE)
+
+    can_guess = False
+    for row in range(GRID_SIZE):
+        for col in range(GRID_SIZE):
+            cx = buttons[0][0].rect.left + (col + 0.5) * CELL_SIZE
+            cy = buttons[0][0].rect.top + (row + 0.5) * CELL_SIZE
+
+            if guessed:
+                match guessed[row][col]:
+                    case 0: pygame.draw.circle(__SCREEN, (80, 80, 80), (cx, cy), CELL_SIZE // 8)
+                    case 1: pygame.draw.circle(__SCREEN, "white", (cx, cy), CELL_SIZE // 8)
+                    case 2: pygame.draw.circle(__SCREEN, "orange", (cx, cy), CELL_SIZE // 8)
+                    case 3: pygame.draw.circle(__SCREEN, "red", (cx, cy), CELL_SIZE // 8)
+                    case 4: pygame.draw.circle(__SCREEN, "blue", (cx, cy), CELL_SIZE // 8); can_guess = True
+    
+    if guess_button:
+        guess_button.color = "blue" if can_guess else "grey"
+        guess_button.draw()
+
+def setup_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = None, padding=0, 
+              interactable=False, guessed=None) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button | None]:
     if not font_size: font_size = 24
 
     CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 3 * padding) // GRID_SIZE)
@@ -116,7 +141,6 @@ def draw_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = No
     buttons = [[None] * GRID_SIZE for i in range(GRID_SIZE)]
 
     # Grid buttons and pegs
-    can_guess = False
     for row in range(GRID_SIZE):
         for col in range(GRID_SIZE):
             #buttons
@@ -124,18 +148,6 @@ def draw_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = No
                                           "black", fixed_height=True, fixed_width=True, border_color=(100, 100, 100))
             button.draw()
             buttons[row][col] = button
-            
-            #Pegs
-            cx = buttons[0][0].rect.left + (col + 0.5) * CELL_SIZE
-            cy = buttons[0][0].rect.top + (row + 0.5) * CELL_SIZE
-
-            if guessed:
-                match guessed[row][col]:
-                    case 0: pygame.draw.circle(__SCREEN, (80, 80, 80), (cx, cy), CELL_SIZE // 8)
-                    case 1: pygame.draw.circle(__SCREEN, "white", (cx, cy), CELL_SIZE // 8)
-                    case 2: pygame.draw.circle(__SCREEN, "orange", (cx, cy), CELL_SIZE // 8)
-                    case 3: pygame.draw.circle(__SCREEN, "red", (cx, cy), CELL_SIZE // 8)
-                    case 4: pygame.draw.circle(__SCREEN, "blue", (cx, cy), CELL_SIZE // 8); can_guess = True
         
     #Write board locations:
     if label: 
@@ -148,11 +160,10 @@ def draw_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = No
     
     #Confirm guess button
     if interactable and guessed:
-        guess_button = pygameWidgets.Button(__SCREEN, "Confirm Guess", 20, [title_text.center[0], title_text.rect.bottom + title_text.rect.height + grid_px + 0.75 * padding], "blue" if can_guess else "grey")
+        guess_button = pygameWidgets.Button(__SCREEN, "Confirm Guess", 20, [title_text.center[0], title_text.rect.bottom + title_text.rect.height + grid_px + 0.75 * padding], "grey")
         guess_button.draw()
 
-    if interactable:
-        return buttons, guess_button
+    return buttons, guess_button if interactable else None
 
 def draw_menu() -> tuple[pygameWidgets.Button, pygameWidgets.Button, pygameWidgets.Button]:
     global __SCREEN
@@ -267,14 +278,15 @@ def game() -> None:
 
     threading.Thread(target=start_async_server_handling, daemon=True).start()
 
+    radar_buttons, guess_button, enemy_buttons = setup_game_board(pygameWidgets.get_scaled_size(50))
+
     while not error_message:
-        # Clear the screen
-        __SCREEN.fill((0, 0, 0))  # Black background
-
-        radar_buttons, guess_button = draw_game_board()
-
         # Draw the sprites
         all_sprites.draw(__SCREEN)
+
+        #update boards
+        draw_grid(radar_buttons, pygameWidgets.get_scaled_size(50), guess_button, user_guessed_squares)
+        draw_grid(enemy_buttons, pygameWidgets.get_scaled_size(50), guessed=enemy_guessed_squares)
 
         # Update the display
         pygame.display.flip()
@@ -290,6 +302,8 @@ def game() -> None:
                 if event.size[0] < minimum_window_size: event.size = (minimum_window_size, event.size[1])
                 if event.size[1] < minimum_window_size: event.size = (event.size[0], minimum_window_size)
                 __SCREEN = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+
+                radar_buttons, guess_button, enemy_buttons = setup_game_board(pygameWidgets.get_scaled_size(50))
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for row in range(len(radar_buttons)):
                     for col in range(len(radar_buttons[row])):
@@ -340,7 +354,7 @@ if __name__ == "__main__":
     server_uri = "ws://localhost"
 
     global server_port
-    server_port = "4444"
+    server_port = "1234"
 
     global player_id
     player_id = 0
