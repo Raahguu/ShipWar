@@ -55,8 +55,11 @@ if __name__ == "__main__":
     except:
         port = 0
         while True:
-            port = input("What port would you like to host the server on: ")
+            port = input("What port would you like to host the server on: ").strip()
             try: 
+                if port == "":
+                    port = 6363
+                    break
                 port = int(port)
                 if port < 1: 1/0
                 break
