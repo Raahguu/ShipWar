@@ -1,6 +1,5 @@
 #Imports
 import pygame
-import textwrap
 import threading
 import asyncio
 import websockets
@@ -95,6 +94,7 @@ def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameW
 
     #Draw Background
     __SCREEN.fill((0, 0, 0)) 
+    #TODO: add a title, and the user's and opponent's names
 
     # Left board - Radar (shots fired)
     radar_buttons, guess_button = setup_grid(LEFT_TOP=(0, 0), title="Radar", label=True, font_size=font_size, padding=padding, interactable=True, guessed=user_guessed_squares)
@@ -253,13 +253,13 @@ def settings() -> None:
                 #Entry Fields
                 player_name_entry_field.pressed(event.pos)
                 #Buttons
-                if default_button.pressed(event.pos): pass
+                if default_button.pressed(event.pos): pass #TODO: have the default button actually do something, or get rid of it
                 elif save_button.pressed(event.pos):
                     player_name = player_name_entry_field.input.inner_text
                 elif back_button.pressed(event.pos): return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
             elif event.type == pygame.KEYDOWN:
-                if player_name_entry_field.has_focus: player_name_entry_field.type(event)
+                player_name_entry_field.type(event)
 
 
 def game() -> None:
@@ -276,6 +276,7 @@ def game() -> None:
     global enemy_guessed_squares
     enemy_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
 
+    #TODO: figure out if threading is neccessary
     threading.Thread(target=start_async_server_handling, daemon=True).start()
 
     radar_buttons, guess_button, enemy_buttons = setup_game_board(pygameWidgets.get_scaled_size(50))
@@ -370,6 +371,7 @@ def get_server_info():
                     server_port = port_input.input.inner_text
                     game()
                     return
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
             elif event.type == pygame.KEYDOWN:
                 ip_input.type(event)
                 port_input.type(event)
