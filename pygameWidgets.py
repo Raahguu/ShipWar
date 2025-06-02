@@ -440,6 +440,7 @@ class Button(Widget):
     def center(self, value : list[int, int]):
         if type(value) not in (tuple, list) or len(value) != 2: raise TypeError(f"The center can only either be an tuple, or a list of two ints for the x, and y values; not a {type(value)}")
         self.__center = list(value)
+        self.text.center = self.center
         if not self._block_calcs: self._calc_rect()
 
     @property
