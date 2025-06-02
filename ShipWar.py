@@ -318,6 +318,68 @@ def game() -> None:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: return
 
+def get_server_info():
+    global __SCREEN
+    global error_message
+    global server_uri
+    global server_port
+
+    box_width = int(__SCREEN.get_width() // 2)
+    box_height = int(__SCREEN.get_height() // 2)
+    
+    bounding_box = pygame.Rect(__SCREEN.get_width() // 2 - box_width // 2, __SCREEN.get_height() // 2 - box_height // 2, box_width, box_height)
+    padding = pygameWidgets.get_scaled_size(70)
+
+    title = pygameWidgets.Text(__SCREEN, "Server info", [bounding_box.centerx, bounding_box.top + padding], font_size=24)
+
+    uri_input = pygameWidgets.EntryField(__SCREEN, [title.rect.center[0], title.rect.bottom + padding], "IP: ", input_text=server_uri)
+
+    port_input = pygameWidgets.EntryField(__SCREEN, [uri_input.center[0], uri_input.center[1] + padding], "Port: ", input_text=server_port)
+
+    confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", int(padding // 1.5), [port_input.center[0], port_input.center[1] + padding])
+
+    while not error_message:
+        __SCREEN.fill("black")
+        box_width = int(__SCREEN.get_width() // 2)
+        box_height = int(__SCREEN.get_height() // 2)
+
+        
+
+        pygame.draw.rect(__SCREEN, "black", bounding_box)
+        pygame.draw.rect(__SCREEN, "white", bounding_box, 1)
+
+        padding = pygameWidgets.get_scaled_size(70)
+        
+        title.draw()
+
+        uri_input.draw()
+
+        port_input.draw()
+
+        confirm_button.draw()
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                #Entry Fields
+                uri_input.pressed(event.pos)
+                port_input.pressed(event.pos)
+                #Buttons
+                if confirm_button.pressed(event.pos): 
+                    server_uri = uri_input.input.inner_text
+                    server_port = port_input.input.inner_text
+                    game()
+                    return
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
+            elif event.type == pygame.KEYDOWN:
+                if uri_input.has_focus: uri_input.type(event)
+                if port_input.has_focus: port_input.type(event)
+
+
 def menu() -> None:
     global __SCREEN
     global error_message
@@ -332,7 +394,7 @@ def menu() -> None:
                 return
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if play_button.pressed(event.pos):
-                    game()
+                    get_server_info()
                 if settings_button.pressed(event.pos):
                     settings()
                 if quit_button.pressed(event.pos):
