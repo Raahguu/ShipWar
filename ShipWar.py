@@ -324,38 +324,33 @@ def get_server_info():
     global server_uri
     global server_port
 
-    box_width = int(__SCREEN.get_width() // 2)
-    box_height = int(__SCREEN.get_height() // 2)
-    
-    bounding_box = pygame.Rect(__SCREEN.get_width() // 2 - box_width // 2, __SCREEN.get_height() // 2 - box_height // 2, box_width, box_height)
-    padding = pygameWidgets.get_scaled_size(70)
+    title = pygameWidgets.Text(__SCREEN, "Server info", [0, 0], font_size=24)
 
-    title = pygameWidgets.Text(__SCREEN, "Server info", [bounding_box.centerx, bounding_box.top + padding], font_size=24)
+    uri_input = pygameWidgets.EntryField(__SCREEN, [0, 0], "IP: ", input_text=server_uri)
 
-    uri_input = pygameWidgets.EntryField(__SCREEN, [title.rect.center[0], title.rect.bottom + padding], "IP: ", input_text=server_uri)
+    port_input = pygameWidgets.EntryField(__SCREEN, [0, 0], "Port: ", input_text=server_port)
 
-    port_input = pygameWidgets.EntryField(__SCREEN, [uri_input.center[0], uri_input.center[1] + padding], "Port: ", input_text=server_port)
-
-    confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", int(padding // 1.5), [port_input.center[0], port_input.center[1] + padding])
+    confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", 0, [0, 0])
 
     while not error_message:
         __SCREEN.fill("black")
         box_width = int(__SCREEN.get_width() // 2)
         box_height = int(__SCREEN.get_height() // 2)
-
-        
-
+        padding = pygameWidgets.get_scaled_size(70)
+    
+        bounding_box = pygame.Rect(__SCREEN.get_width() // 2 - box_width // 2, __SCREEN.get_height() // 2 - box_height // 2, box_width, box_height)
         pygame.draw.rect(__SCREEN, "black", bounding_box)
         pygame.draw.rect(__SCREEN, "white", bounding_box, 1)
-
-        padding = pygameWidgets.get_scaled_size(70)
         
+        title.center = [bounding_box.centerx, bounding_box.top + padding]
+        uri_input.center = [title.rect.center[0], title.rect.bottom + padding]
+        port_input.center = [uri_input.center[0], uri_input.center[1] + padding]
+        confirm_button.center = [port_input.center[0], port_input.center[1] + padding]
+        confirm_button.padding = int(padding // 1.5)
+
         title.draw()
-
         uri_input.draw()
-
         port_input.draw()
-
         confirm_button.draw()
 
         pygame.display.flip()
