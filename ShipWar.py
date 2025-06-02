@@ -39,10 +39,10 @@ def display_error_box() -> None:
 async def handle_server():
     global guess
     global error_message
-    global server_uri
+    global server_ip
     global server_port
     try:
-        ws_connection = await websockets.connect(server_uri + ":" + server_port)
+        ws_connection = await websockets.connect("ws://" + str(server_ip) + ":" + str(server_port))
         reply = json.loads(await ws_connection.recv())
     except Exception as e:
         error_message = f"Could not connect to server: {str(e)}"
@@ -321,12 +321,12 @@ def game() -> None:
 def get_server_info():
     global __SCREEN
     global error_message
-    global server_uri
+    global server_ip
     global server_port
 
     title = pygameWidgets.Text(__SCREEN, "Server info", [0, 0], font_size=24)
 
-    uri_input = pygameWidgets.EntryField(__SCREEN, [0, 0], "IP: ", input_text=server_uri)
+    ip_input = pygameWidgets.EntryField(__SCREEN, [0, 0], "IP: ", input_text=server_ip)
 
     port_input = pygameWidgets.EntryField(__SCREEN, [0, 0], "Port: ", input_text=server_port)
 
@@ -343,13 +343,13 @@ def get_server_info():
         pygame.draw.rect(__SCREEN, "white", bounding_box, 1)
         
         title.center = [bounding_box.centerx, bounding_box.top + padding]
-        uri_input.center = [title.rect.center[0], title.rect.bottom + padding]
-        port_input.center = [uri_input.center[0], uri_input.center[1] + padding]
+        ip_input.center = [title.rect.center[0], title.rect.bottom + padding]
+        port_input.center = [ip_input.center[0], ip_input.center[1] + padding]
         confirm_button.center = [port_input.center[0], port_input.center[1] + padding]
         confirm_button.padding = int(padding // 1.5)
 
         title.draw()
-        uri_input.draw()
+        ip_input.draw()
         port_input.draw()
         confirm_button.draw()
 
@@ -361,16 +361,17 @@ def get_server_info():
                 return
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 #Entry Fields
-                uri_input.pressed(event.pos)
+                ip_input.pressed(event.pos)
                 port_input.pressed(event.pos)
                 #Buttons
                 if confirm_button.pressed(event.pos): 
-                    server_uri = uri_input.input.inner_text
+                    #TODO: Input validation
+                    server_ip = ip_input.input.inner_text
                     server_port = port_input.input.inner_text
                     game()
                     return
             elif event.type == pygame.KEYDOWN:
-                uri_input.type(event)
+                ip_input.type(event)
                 port_input.type(event)
 
 
@@ -406,8 +407,8 @@ if __name__ == "__main__":
     global error_message
     error_message = ""
 
-    global server_uri
-    server_uri = "ws://localhost"
+    global server_ip
+    server_ip = "localhost"
 
     global server_port
     server_port = "6363"
