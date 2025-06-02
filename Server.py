@@ -11,7 +11,7 @@ MAX_PLAYERS = 2
 connected_clients : list[websockets.asyncio.server.ServerConnection] = []
 
 async def handle_client(socket : websockets.asyncio.server.ServerConnection):
-    print("handeling client")
+    print("handling client")
     global connected_clients
 
     if len(connected_clients) >= MAX_PLAYERS:

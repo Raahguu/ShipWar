@@ -615,7 +615,7 @@ class EntryField(Widget):
         self.has_focus = self.rect.collidepoint(*args)
 
     def type(self, event : pygame.event.Event):
-        """Handels typing to the Entry Field"""
+        """Handles typing to the Entry Field"""
         #if invalid
         if not self.has_focus or event.type != pygame.KEYDOWN: return
         if event.key == pygame.K_BACKSPACE: 
