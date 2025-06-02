@@ -369,10 +369,9 @@ def get_server_info():
                     server_port = port_input.input.inner_text
                     game()
                     return
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
             elif event.type == pygame.KEYDOWN:
-                if uri_input.has_focus: uri_input.type(event)
-                if port_input.has_focus: port_input.type(event)
+                uri_input.type(event)
+                port_input.type(event)
 
 
 def menu() -> None:
