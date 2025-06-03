@@ -544,7 +544,7 @@ class EntryField(Widget):
 
     def __init__(self, screen : pygame.Surface, center : list[int, int], title_text : str = "title", title_field_dist : int = 20, 
                  text_color : list[int, int, int] | str = "white", font_type : str = 'droid-sans-mono.ttf', font_size : int = 26, input_text : str = "", 
-                 input_padding : list[int, int] = [20, 20], width : int = 250, color : list[int, int, int] | str = "grey30",
+                 input_padding : list[int, int] = [20, 20], width : int = 285, color : list[int, int, int] | str = "grey30",
                  visible_cursor : bool = True, cursor_color : list[int, int, int] | str = "white", cursor_width : int = 1,
                  cursor_height_padding : int = 5): 
         self._block_calcs = True
