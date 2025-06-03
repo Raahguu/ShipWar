@@ -128,7 +128,6 @@ class Text(Widget):
         except: pass
 
     def draw(self):
-        self._calc_surface()
         self.screen.blit(self.surface, self.rect)
 
 class TextArea(Widget):

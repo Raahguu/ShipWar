@@ -90,23 +90,29 @@ def start_async_server_handling():
         	
 #Client logic
 def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
-    font_size= 24
+    global enemy_name
+    global player_name
 
-    #Draw Background
+    font_size = 24
     __SCREEN.fill((0, 0, 0)) 
-    #TODO: add a title, and the user's and opponent's names
+    enemy_username_text = pygameWidgets.Text(__SCREEN, enemy_name, [0, padding // 2])
+    enemy_username_text.rect.left = padding
+    enemy_username_text.draw()
+    player_username_text = pygameWidgets.Text(__SCREEN, player_name, [0, padding // 2])
+    player_username_text.rect.right = __SCREEN.get_width() - padding
+    player_username_text.draw()
 
     # Left board - Radar (shots fired)
-    radar_buttons, guess_button = setup_grid(LEFT_TOP=(0, 0), title="Radar", label=True, font_size=font_size, padding=padding, interactable=True, guessed=user_guessed_squares)
+    radar_buttons, guess_button = setup_grid(LEFT_TOP=(0, padding // 2), title="Radar", label=True, font_size=font_size, padding=padding, interactable=True, guessed=user_guessed_squares)
 
     # Right board - Player's ships
     right_x = __SCREEN.get_width() // 2
-    enemy_buttons =  setup_grid(LEFT_TOP=(right_x, 0), title="Game Board", label=True, font_size=font_size, padding=padding, guessed=enemy_guessed_squares)[0]
+    enemy_buttons =  setup_grid(LEFT_TOP=(right_x, padding // 2), title="Game Board", label=True, font_size=font_size, padding=padding, guessed=enemy_guessed_squares)[0]
 
     return radar_buttons, guess_button, enemy_buttons
 
 def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_button : pygameWidgets.Button = None, guessed=None):
-    CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 3 * padding) // GRID_SIZE)
+    CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 4 * padding) // GRID_SIZE)
 
     can_guess = False
     for row in range(GRID_SIZE):
@@ -130,7 +136,7 @@ def setup_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = N
               interactable=False, guessed=None) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button | None]:
     if not font_size: font_size = 24
 
-    CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 3 * padding) // GRID_SIZE)
+    CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 4 * padding) // GRID_SIZE)
     grid_px = CELL_SIZE * GRID_SIZE
 
     # Title
@@ -423,6 +429,9 @@ if __name__ == "__main__":
 
     global player_name
     player_name = "Anonymous"
+
+    global enemy_name
+    enemy_name = "Anonymous"
 
     pygame.init()
     
