@@ -9,6 +9,7 @@ import os
 DEFAULT_PORT = 6363
 MAX_PLAYERS = 2
 connected_clients : list[websockets.asyncio.server.ServerConnection] = []
+players : list = [None, None]
 
 async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     print("handling client")
@@ -22,8 +23,19 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     connected_clients += [socket]
     player_id = len(connected_clients)
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
-    print(f"Player {player_id} joined")
-
+    try:
+        message = json.loads(await socket.recv())
+        if message["type"] != "username": 1/0
+        players[player_id - 1] = message["name"]
+    except:
+        await socket.send(json.dumps({"type": "error", "message": "Invalid username"}))
+        await socket.close()
+        print("Player connected, but didn't provide name")
+    print(f"Player {players[player_id - 1]} joined")
+    while True:
+        if players[player_id * -1 + 2] != None:
+            await socket.send(json.dumps({"type": "username", "name": players[player_id * -1 + 2]}))
+            break
     try:
         while True:
             message = await socket.recv()
@@ -36,7 +48,7 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
                 else: await socket.send(json.dumps({"type": "guess_result", "result": 1}))
                 
     except websockets.exceptions.ConnectionClosed as e:
-        print(f"Player {player_id} disconnected")
+        print(f"Player {players[player_id - 1]} disconnected")
         connected_clients.remove(socket)
         
 
