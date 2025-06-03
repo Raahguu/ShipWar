@@ -40,6 +40,8 @@ async def handle_server():
     global error_message
     global server_ip
     global server_port
+    global still_playing
+
     try:
         ws_connection = await websockets.connect("ws://" + str(server_ip) + ":" + str(server_port))
         reply = json.loads(await ws_connection.recv())
@@ -57,7 +59,7 @@ async def handle_server():
         error_message = "Match full"
         return
 
-    while not error_message:
+    while not error_message and still_playing:
         if guess:
             try:
                 await ws_connection.send(json.dumps({
@@ -267,7 +269,6 @@ def settings() -> None:
             elif event.type == pygame.KEYDOWN:
                 player_name_entry_field.type(event)
 
-
 def game() -> None:
     global __SCREEN
     global guess
@@ -330,6 +331,7 @@ def get_server_info():
     global error_message
     global server_ip
     global server_port
+    global still_playing
 
     title = pygameWidgets.Text(__SCREEN, "Server info", [0, 0], font_size=24)
 
@@ -375,13 +377,14 @@ def get_server_info():
                     #TODO: Input validation
                     server_ip = ip_input.input.inner_text
                     server_port = port_input.input.inner_text
+                    still_playing = True
                     game()
+                    still_playing = False
                     return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
             elif event.type == pygame.KEYDOWN:
                 ip_input.type(event)
                 port_input.type(event)
-
 
 def menu() -> None:
     global __SCREEN
