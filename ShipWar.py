@@ -331,7 +331,8 @@ def game() -> None:
     threading.Thread(target=start_async_server_handling, daemon=True).start()
 
     while still_playing == False:
-        pass
+        event = pygame.event.get()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
 
     radar_buttons, guess_button, enemy_buttons = setup_game_board(pygameWidgets.get_scaled_size(50))
 
