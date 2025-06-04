@@ -14,6 +14,8 @@ players : list = [None, None]
 async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     print("handling client")
     global connected_clients
+    global game_ready
+    global players
 
     if len(connected_clients) >= MAX_PLAYERS:
         await socket.send(json.dumps({"type": "error", "message": "Match full"}))
@@ -32,10 +34,11 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
         await socket.close()
         print("Player connected, but didn't provide name")
     print(f"Player {players[player_id - 1]} joined")
-    while True:
-        if players[player_id * -1 + 2] != None:
-            await socket.send(json.dumps({"type": "username", "name": players[player_id * -1 + 2]}))
-            break
+    if None not in players:
+        game_ready.set()
+    else:
+        await game_ready.wait()
+    await socket.send(json.dumps({"type": "username", "name": players[player_id * -1 + 2]}))
     try:
         while True:
             message = await socket.recv()
@@ -60,6 +63,9 @@ async def start_server(port : int):
         await server.serve_forever()
 
 if __name__ == "__main__":
+    global game_ready
+    game_ready = asyncio.Event()
+
     try:
         if sys.argv[1] != "Docker": 1/0
         #this means the server is running in a docker container
