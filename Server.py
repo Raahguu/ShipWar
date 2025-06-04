@@ -40,7 +40,7 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
         await game_ready.wait()
     await socket.send(json.dumps({"type": "username", "name": players[player_id * -1 + 2]}))
     try:
-        while True:
+        while game_ready.is_set():
             message = await socket.recv()
             data = json.loads(message)
             
@@ -49,10 +49,12 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
                 if data["position"] in [[i, i] for i in range(9)]: # temporary hit/miss code just for testing 
                     await socket.send(json.dumps({"type": "guess_result", "result": 2}))
                 else: await socket.send(json.dumps({"type": "guess_result", "result": 1}))
+        await socket.send(json.dumps({"type": "disconnection"}))
                 
     except websockets.exceptions.ConnectionClosed as e:
         print(f"Player {players[player_id - 1]} disconnected")
         connected_clients.remove(socket)
+        game_ready.clear()
         
 
 

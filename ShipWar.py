@@ -34,6 +34,22 @@ def display_error_box() -> None:
 
         pygame.display.flip()
 
+async def get_server_message(socket : websockets.ClientConnection, expected_type : str):
+    global error_message
+
+    reply = json.loads(await socket.recv())
+    try:
+        if reply["type"] == expected_type:
+            return reply
+        else: 1/0
+    except Exception as e:
+        if reply["type"] == "error": error_message = reply["message"]
+        if reply["type"] == "disconnection": error_message = "The other player disconnected"
+        else: 
+            try: error_message = f"Server Error: unexpected message of type {reply["type"]}"
+            except: error_message = "Server Error: Corrupted Server Message didn't specify type attribute"
+        return False
+
 #Server connection logic
 async def handle_server():
     global guess
@@ -48,50 +64,26 @@ async def handle_server():
     #connect to the server
     try:
         ws_connection = await websockets.connect("ws://" + str(server_ip) + ":" + str(server_port))
-        reply = json.loads(await ws_connection.recv())
     except Exception as e:
         error_message = f"Could not connect to server: {str(e)}"
         return
     #check connection and get player_id
-    try:
-        if reply["type"] == "welcome":
-            player_id = int(reply["player"])
-        else: 1/0
-    except Exception as e:
-        if reply["type"] == "error":
-            error_message = reply["message"]
-            return
-        error_message = f"Server Error {str(e)}"
-        return
+    reply = await get_server_message(ws_connection, "welcome")
+    if reply == False: return
+    player_id = int(reply["player"])
+
     #Tell server username, and get enemies username
-    try:
-        await ws_connection.send(json.dumps({"type":"username", "name": player_name}))
-        reply = json.loads(await ws_connection.recv())
-        if reply["type"] == "username":
-            enemy_name = reply["name"]
-        elif reply["type"] == "error":
-            error_message = reply["message"]
-            return
-        else:
-            error_message = f"Didn't expect a {reply["type"]} reply from the server"
-            return
-    except Exception as e:
-        error_message = f"Server Error {str(e)}"
-        return
-    
+    await ws_connection.send(json.dumps({"type":"username", "name": player_name}))
+    reply = await get_server_message(ws_connection, "username")
+    if reply == False: return
+    enemy_name = reply["name"]
     still_playing = True
 
     #Wait for the other players turn if they go first
     if player_id != 1:
-        reply = json.loads(await ws_connection.recv())
-        if reply["type"] == "enemy_guess_result":
-            enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
-        else:
-            if reply["type"] == "error":
-                error_message = reply["message"]
-                return
-            error_message = f"Server Error {str(e)}"
-            return
+        reply = await get_server_message(ws_connection, "enemy_guess_result")
+        if reply == False: return
+        enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
     #loop through the game loop if were still playing and there are no errors yet
     while not error_message and still_playing:
         #if the player has guessed
@@ -105,30 +97,16 @@ async def handle_server():
                 error_message = f"Failed to send guess: {str(e)}"
                 return
             #Get reply on what the result of the guess was
-            try:
-                reply = json.loads(await ws_connection.recv())
-                if reply["type"] == "guess_result":
-                    user_guessed_squares[guess[0]][guess[1]] = reply["result"]
-                else: 
-                    if reply["type"] == "error":
-                        error_message = reply["message"]
-                        return
-                    error_message = f"Server Error {str(e)}"
-            except Exception as e:
-                error_message = f"Server Error {str(e)}"
-                   	    
+            reply = await get_server_message(ws_connection, "guess_result")
+            if reply == False: return
+            user_guessed_squares[guess[0]][guess[1]] = reply["result"]
+
             guess = False
             
             #Get enemies guess
-            reply = json.loads(await ws_connection.recv())
-            if reply["type"] == "enemy_guess_result":
-                enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
-            else: 
-                if reply["type"] == "error":
-                    error_message = reply["message"]
-                    return
-                error_message = f"Server Error {str(e)}"
-                return
+            reply = await get_server_message(ws_connection, "enemy_guess_result")
+            if reply == False: return
+            enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
 
 def start_async_server_handling():
     asyncio.run(handle_server())
