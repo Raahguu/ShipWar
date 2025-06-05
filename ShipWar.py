@@ -1,6 +1,5 @@
 #Imports
 import pygame
-import threading
 import asyncio
 import websockets
 import json
@@ -53,6 +52,7 @@ async def get_server_message(socket : websockets.ClientConnection, expected_type
 #Server connection logic
 async def handle_server():
     global guess
+    global has_guessed
     global error_message
     global server_ip
     global server_port
@@ -87,30 +87,28 @@ async def handle_server():
     #loop through the game loop if were still playing and there are no errors yet
     while not error_message and still_playing:
         #if the player has guessed
-        if guess:
-            #Tell server guess
-            try:
-                await ws_connection.send(json.dumps({
-                    "type":"guess", 
-                    "position": [guess[0], guess[1]]}))
-            except Exception as e:
-                error_message = f"Failed to send guess: {str(e)}"
-                return
-            #Get reply on what the result of the guess was
-            reply = await get_server_message(ws_connection, "guess_result")
-            if reply == False: return
-            user_guessed_squares[guess[0]][guess[1]] = reply["result"]
+        await has_guessed.wait()
+        #Tell server guess
+        try:
+            await ws_connection.send(json.dumps({
+                "type":"guess", 
+                "position": [guess[0], guess[1]]}))
+        except Exception as e:
+            error_message = f"Failed to send guess: {str(e)}"
+            return
+        #Get reply on what the result of the guess was
+        reply = await get_server_message(ws_connection, "guess_result")
+        if reply == False: return
+        user_guessed_squares[guess[0]][guess[1]] = reply["result"]
 
-            guess = False
-            
-            #Get enemies guess
-            reply = await get_server_message(ws_connection, "enemy_guess_result")
-            if reply == False: return
-            enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+        guess = False
+        has_guessed.clear()
+        
+        #Get enemies guess
+        reply = await get_server_message(ws_connection, "enemy_guess_result")
+        if reply == False: return
+        enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
 
-def start_async_server_handling():
-    asyncio.run(handle_server())
-        	
 #Client logic
 def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
     global enemy_name
@@ -290,7 +288,7 @@ def settings() -> None:
             elif event.type == pygame.KEYDOWN:
                 player_name_entry_field.type(event)
 
-def game() -> None:
+async def game() -> None:
     global __SCREEN
     global guess
     global error_message
@@ -305,16 +303,16 @@ def game() -> None:
     global enemy_guessed_squares
     enemy_guessed_squares = [[0] * GRID_SIZE for i in range(GRID_SIZE)]
 
-    #TODO: figure out if threading is neccessary
-    threading.Thread(target=start_async_server_handling, daemon=True).start()
+    asyncio.create_task(handle_server())
 
-    while still_playing == False:
+    while still_playing == False and not error_message:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
+        await asyncio.sleep(0.1)
 
     radar_buttons, guess_button, enemy_buttons = setup_game_board(pygameWidgets.get_scaled_size(50))
 
-    while not error_message:
+    while not error_message and still_playing:
         # Draw the sprites
         all_sprites.draw(__SCREEN)
 
@@ -349,6 +347,7 @@ def game() -> None:
                 if last_guess and guess_button.pressed(event.pos):
                     guess = [last_guess[0], last_guess[1]]
                     last_guess = []
+                    has_guessed.set()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: return
 
@@ -403,7 +402,7 @@ def get_server_info():
                     #TODO: Input validation
                     server_ip = ip_input.input.inner_text
                     server_port = port_input.input.inner_text
-                    game()
+                    asyncio.run(game())
                     still_playing = False
                     return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
@@ -463,6 +462,9 @@ if __name__ == "__main__":
 
     global still_playing
     still_playing = False
+
+    global has_guessed
+    has_guessed = asyncio.Event()
 
     pygame.init()
     
