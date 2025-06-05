@@ -79,15 +79,19 @@ async def handle_server():
     enemy_name = reply["name"]
     still_playing = True
 
+    print("setup done")
     #Wait for the other players turn if they go first
     if player_id != 1:
+        print("waiting for other player to guess")
         reply = await get_server_message(ws_connection, "enemy_guess_result")
         if reply == False: return
         enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
     #loop through the game loop if were still playing and there are no errors yet
     while not error_message and still_playing:
         #if the player has guessed
+        print("waiting for player to guess")
         await has_guessed.wait()
+        print("Player has guessed")
         #Tell server guess
         try:
             await ws_connection.send(json.dumps({
@@ -97,17 +101,23 @@ async def handle_server():
             error_message = f"Failed to send guess: {str(e)}"
             return
         #Get reply on what the result of the guess was
+        print("waiting for guess result")
         reply = await get_server_message(ws_connection, "guess_result")
         if reply == False: return
         user_guessed_squares[guess[0]][guess[1]] = reply["result"]
+
+        print("Other player has guessed")
 
         guess = False
         has_guessed.clear()
         
         #Get enemies guess
+        print("waiting for other players guess")
         reply = await get_server_message(ws_connection, "enemy_guess_result")
         if reply == False: return
         enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+
+        print("other player guessed")
 
 #Client logic
 def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
@@ -167,12 +177,14 @@ def setup_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = N
 
     buttons = [[None] * GRID_SIZE for i in range(GRID_SIZE)]
 
+    inverted_scaled_cell_size = pygameWidgets.get_scaled_size(CELL_SIZE, scale_reference=__SCREEN.get_size(), current_size=(1280, 700))
+
     # Grid buttons and pegs
     for row in range(GRID_SIZE):
         for col in range(GRID_SIZE):
             #buttons
-            button = pygameWidgets.Button(__SCREEN, "", CELL_SIZE, [title_text.center[0] - grid_px // 2 + (col + 0.5) * CELL_SIZE, title_text.rect.bottom + title_text.rect.height + (row + 0.5) * CELL_SIZE], 
-                                          "black", fixed_height=True, fixed_width=True, border_color=(100, 100, 100))
+            button = pygameWidgets.Button(__SCREEN, "", inverted_scaled_cell_size, [title_text.center[0] - grid_px // 2 + (col + 0.5) * CELL_SIZE, title_text.rect.bottom + title_text.rect.height + (row + 0.5) * CELL_SIZE], 
+                                          fixed_height=True, fixed_width=True, border_color=(100, 100, 100))
             button.draw()
             buttons[row][col] = button
         
@@ -293,6 +305,7 @@ async def game() -> None:
     global guess
     global error_message
     global still_playing
+    global has_guessed
     all_sprites = pygame.sprite.Group()
     last_guess = []
 
@@ -341,12 +354,12 @@ async def game() -> None:
                     for col in range(len(radar_buttons[row])):
                         if radar_buttons[row][col].pressed(event.pos):
                             if user_guessed_squares[row][col] != 0: break
-                            if last_guess: user_guessed_squares[last_guess[0]][last_guess[1]] = 0
+                            if last_guess and user_guessed_squares[last_guess[0]][last_guess[1]] == 4: user_guessed_squares[last_guess[0]][last_guess[1]] = 0
                             last_guess = [row, col]
                             user_guessed_squares[row][col] = 4
                 if last_guess and guess_button.pressed(event.pos):
                     guess = [last_guess[0], last_guess[1]]
-                    last_guess = []
+                    print("guess")
                     has_guessed.set()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: return
@@ -403,6 +416,7 @@ def get_server_info():
                     server_ip = ip_input.input.inner_text
                     server_port = port_input.input.inner_text
                     asyncio.run(game())
+                    print("No longer playing")
                     still_playing = False
                     return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return

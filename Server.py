@@ -16,15 +16,19 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     global connected_clients
     global game_ready
     global players
+    global guess
+    global guess_sent
 
+    #Check the number of players isn't already too many
     if len(connected_clients) >= MAX_PLAYERS:
         await socket.send(json.dumps({"type": "error", "message": "Match full"}))
         await socket.close()
         print("Player attempted to connect, but match is full")
-    
+    #Send the player a welcome message
     connected_clients += [socket]
     player_id = len(connected_clients)
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
+    #Get the players username
     try:
         message = json.loads(await socket.recv())
         if message["type"] != "username": 1/0
@@ -34,27 +38,54 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
         await socket.close()
         print("Player connected, but didn't provide name")
     print(f"Player {players[player_id - 1]} joined")
+    #Wait till all players have joined
     if None not in players:
         game_ready.set()
     else:
         await game_ready.wait()
     await socket.send(json.dumps({"type": "username", "name": players[player_id * -1 + 2]}))
+
+    #Actual game loop
+    #If player is not player 1
+    if player_id != 1:
+        await guess_sent.wait()
+        data = guess
+        guess = None
+        guess_sent.clear()
+        if data["position"] in [[i, i] for i in range(9)]: # temporary hit/miss code just for testing 
+            await socket.send(json.dumps({"type": "enemy_guess_result", "result": 2}))
+        else: await socket.send(json.dumps({"type": "enemy_guess_result", "result": 1}))
+    #Rest of the game
     try:
         while game_ready.is_set():
+            #Get the players guess
             message = await socket.recv()
+            try:
+                if message["type"] != "guess": 1/0
+            except: 1/0
             data = json.loads(message)
-            
+            print(data)
             if data["type"] == "guess":
                 #TODO: Actual hit detection, which would first requre ships to actually be placed somewhere first
                 if data["position"] in [[i, i] for i in range(9)]: # temporary hit/miss code just for testing 
                     await socket.send(json.dumps({"type": "guess_result", "result": 2}))
                 else: await socket.send(json.dumps({"type": "guess_result", "result": 1}))
+            #Send out that the guess occured
+            guess = data
+            guess_sent.set()
+            await asyncio.sleep(1)
+            #Get the other players guess
+            await guess_sent.wait()
+            data = guess
+            guess = None
+            guess_sent.clear()
+            if data["position"] in [[i, i] for i in range(9)]: # temporary hit/miss code just for testing 
+                    await socket.send(json.dumps({"type": "enemy_guess_result", "result": 2}))
+            else: await socket.send(json.dumps({"type": "enemy_guess_result", "result": 1}))
         await socket.send(json.dumps({"type": "disconnection"}))
-                
-    except websockets.exceptions.ConnectionClosed as e:
+    except websockets.exceptions.ConnectionClosed:
         print(f"Player {players[player_id - 1]} disconnected")
         connected_clients.remove(socket)
-        game_ready.clear()
 
 async def start_server(port : int):
     if type(port) != int: raise TypeError(f"You must supply a an integer port number, not: {port}")
@@ -65,6 +96,11 @@ async def start_server(port : int):
 if __name__ == "__main__":
     global game_ready
     game_ready = asyncio.Event()
+
+    global guess_sent
+    guess_sent = asyncio.Event()
+
+    guess = None
 
     try:
         if sys.argv[1] != "Docker": 1/0
@@ -88,3 +124,4 @@ if __name__ == "__main__":
         else: print(os.system('ifconfig | grep inet"'))
         print(f"Port: {port}")
         asyncio.run(start_server(port))
+        game_ready.clear()

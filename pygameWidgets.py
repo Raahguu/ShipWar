@@ -7,8 +7,7 @@ SCREEN = None
 def get_scaled_size(base_size : int, min_size : int = 1, max_size : int = None, scale_reference = (1280, 700), current_size : tuple[int, int] = None) -> int | float:
     global SCREEN
     current_size = current_size if current_size else SCREEN.get_size()
-    min_size = min_size if min_size else base_size / 3
-    max_size = max_size if max_size else base_size * 3
+    max_size = max_size if max_size else float('inf')
     scale_factor = min(current_size[0] / scale_reference[0], current_size[1] / scale_reference[1])
     scaled_size = min(max(min_size, base_size * scale_factor), max_size)
     if type(base_size) is int: return round(scaled_size)
