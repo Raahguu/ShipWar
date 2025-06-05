@@ -55,8 +55,6 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
         print(f"Player {players[player_id - 1]} disconnected")
         connected_clients.remove(socket)
         game_ready.clear()
-        
-
 
 async def start_server(port : int):
     if type(port) != int: raise TypeError(f"You must supply a an integer port number, not: {port}")
@@ -85,6 +83,8 @@ if __name__ == "__main__":
                 break
             except: 
                 print("The port needs to be an integer greater than 0")
-        print(os.system('ipconfig | find "IPv4 Address"'))
+        ips = os.system('ipconfig | find "IPv4 Address"')
+        if ips == 0: print(ips)
+        else: print(os.system('ifconfig | grep inet"'))
         print(f"Port: {port}")
         asyncio.run(start_server(port))
