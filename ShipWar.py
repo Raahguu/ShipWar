@@ -37,6 +37,7 @@ async def get_server_message(socket : websockets.ClientConnection, expected_type
     global error_message
 
     reply = json.loads(await socket.recv())
+    print(reply)
     try:
         if reply["type"] == expected_type:
             return reply
@@ -101,12 +102,10 @@ async def handle_server():
             error_message = f"Failed to send guess: {str(e)}"
             return
         #Get reply on what the result of the guess was
-        print("waiting for guess result")
         reply = await get_server_message(ws_connection, "guess_result")
+        print("Got Result")
         if reply == False: return
         user_guessed_squares[guess[0]][guess[1]] = reply["result"]
-
-        print("Other player has guessed")
 
         guess = False
         has_guessed.clear()
@@ -118,6 +117,7 @@ async def handle_server():
         enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
 
         print("other player guessed")
+    await ws_connection.send(json.dumps({"type":"disconnection"}))
 
 #Client logic
 def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
@@ -361,6 +361,7 @@ async def game() -> None:
                     guess = [last_guess[0], last_guess[1]]
                     print("guess")
                     has_guessed.set()
+                    await asyncio.sleep(0)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: return
 
