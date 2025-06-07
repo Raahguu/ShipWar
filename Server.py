@@ -20,6 +20,17 @@ def guess_result(reply : dict):
         return 2
     return 1
 
+async def disconnect(player_id : int):
+    global players
+    global connected_clients
+    print(f"{players[player_id]} Disconnected")
+    try: other_socket = connected_clients[player_id * -1 + 1]
+    except: other_socket = None
+    if other_socket != None: await other_socket.send(json.dumps({"type":"disconnection"}))
+    
+    players = [None, None]
+    connected_clients = []
+
 async def client_listner(socket: websockets.asyncio.server.ServerConnection):
     global connected_clients, players
     player_id = connected_clients.index(socket)
@@ -48,10 +59,8 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
                 if other_socket != None:
                     await other_socket.send(json.dumps({"type": "enemy_guess_result", "position": reply["position"], "result": result}))
             elif reply["type"] == "disconnection":
-                print(f"{players[player_id]} disconnected")
-                if other_socket != None:
-                    other_socket.send(json.dumps({"type":"disconnection"}))
-                raise DisconnectError
+                await disconnect(player_id)
+                return
             elif reply["type"] == "error":
                 print(reply["message"])
                 return
@@ -59,11 +68,7 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
                 print(f"Unexpected message type: {reply['type']}")
                 return
         except websockets.exceptions.ConnectionClosedError:
-            print(f"{players[player_id]} Disconnected")
-            if other_socket == None:
-                try: other_socket = connected_clients[player_id * -1 + 1]
-                except: pass
-            if other_socket != None: await other_socket.send(json.dumps({"type":"disconnection"}))
+            await disconnect(player_id)
             return
         except Exception as e:
             print(f"Error received from {players[player_id]}: {e}")
@@ -71,55 +76,30 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
 
 async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     global connected_clients
-    global game_ready
     global players
-    global guess
-    global guess_sent
 
     #Check the number of players isn't already too many
     if len(connected_clients) >= MAX_PLAYERS:
         await socket.send(json.dumps({"type": "error", "message": "Match full"}))
         await socket.close()
         print("Player attempted to connect, but match is full")
+        return
     #Send the player a welcome message
     connected_clients.append(socket)
     player_id = len(connected_clients)
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
-    try:
-        asyncio.create_task(client_listner(socket))
-    except Exception as e: raise e
-    while True: await asyncio.sleep(1) 
+
+    asyncio.create_task(client_listner(socket))
+    while socket in connected_clients: await asyncio.sleep(1) 
 
 async def start_server(port : int):
     if type(port) != int: raise TypeError(f"You must supply a an integer port number, not: {port}")
     print("Server up")
     async with websockets.asyncio.server.serve(handle_client, "localhost", port, ping_timeout=120) as server:
-        while True:
-            try:
-                await server.serve_forever()
-            except DisconnectError: 
-                global players 
-                players = [None, None]
-                global connected_clients 
-                connected_clients = []
-                global game_ready
-                game_ready.clear()
-                global guess_sent
-                guess_sent.clear()
-                global guess
-                guess = None
+        await server.serve_forever()
                 
 
 if __name__ == "__main__":
-    global game_ready
-    game_ready = asyncio.Event()
-
-    global guess_sent
-    guess_sent = asyncio.Event()
-
-    global guess
-    guess = None
-
     try:
         if sys.argv[1] != "Docker": 1/0
         #this means the server is running in a docker container
@@ -142,4 +122,3 @@ if __name__ == "__main__":
         else: print(os.system('ifconfig | grep inet"'))
         print(f"Port: {port}")
         asyncio.run(start_server(port))
-        game_ready.clear()

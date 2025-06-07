@@ -103,6 +103,7 @@ async def handle_server():
             guess = False
 
     await ws_connection.send(json.dumps({"type":"disconnection"}))
+    await ws_connection.close()
     still_playing.clear()
 
 def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
@@ -139,10 +140,10 @@ def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_b
             if guessed:
                 match guessed[row][col]:
                     case 0: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (80, 80, 80))
-                    case 1: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, "white")
-                    case 2: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, "orange")
-                    case 3: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, "red")
-                    case 4: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, "blue"); can_guess = True
+                    case 1: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 255, 255))
+                    case 2: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 165, 0))
+                    case 3: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 0, 0))
+                    case 4: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (0, 0, 255)); can_guess = True
     
     if guess_button:
         guess_button.color = "blue" if can_guess else "grey"
