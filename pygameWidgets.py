@@ -488,6 +488,8 @@ class EntryField(Widget):
 
             self._block_calcs = False
             self._calc_rect()
+
+            self.__blink_counter = 0
         
         @property
         def width(self):
@@ -538,6 +540,9 @@ class EntryField(Widget):
             self.rect.center = (self.editing_text.center[0] - self.editing_text.rect.width // 2 +  int(self.editing_text.font.size(self.editing_text.inner_text[:self.index])[0]), self.editing_text.center[1])
 
         def draw(self):
+            self.__blink_counter += 1
+            if self.__blink_counter == 200: self.__blink_counter *= -1
+            if self.__blink_counter < 0: return
             self._calc_rect()
             if self.visible: pygame.draw.rect(self.screen, self.color, self.rect)
 
