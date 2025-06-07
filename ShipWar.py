@@ -33,27 +33,37 @@ def display_error_box() -> None:
 
         pygame.display.flip()
 
-async def get_server_message(socket : websockets.ClientConnection, expected_type : str):
-    global error_message
-
-    reply = json.loads(await socket.recv())
-    print(reply)
-    try:
-        if reply["type"] == expected_type:
-            return reply
-        else: 1/0
-    except Exception as e:
-        if reply["type"] == "error": error_message = reply["message"]
-        if reply["type"] == "disconnection": error_message = "The other player disconnected"
-        else: 
-            try: error_message = f"Server Error: unexpected message of type {reply["type"]}"
-            except: error_message = "Server Error: Corrupted Server Message didn't specify type attribute"
-        return False
+async def listen_to_server(socket: websockets.ClientConnection):
+    global error_message, user_guessed_squares, enemy_guessed_squares, player_id, enemy_name, still_playing
+    while still_playing:
+        try:
+            reply = json.loads(await socket.recv())
+            print("Received:", reply)
+            if reply["type"] == "welcome":
+                player_id = int(reply["player"])
+            elif reply["type"] == "username":
+                enemy_name = reply["name"]
+                still_playing.set()
+            elif reply["type"] == "guess_result":
+                user_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+            elif reply["type"] == "enemy_guess_result":
+                enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+            elif reply["type"] == "disconnection":
+                error_message = "The other player disconnected"
+                return
+            elif reply["type"] == "error":
+                error_message = reply["message"]
+                return
+            else:
+                error_message = f"Unexpected message type: {reply['type']}"
+                return
+        except Exception as e:
+            error_message = f"Error received from server: {e}"
+            return
 
 #Server connection logic
 async def handle_server():
     global guess
-    global has_guessed
     global error_message
     global server_ip
     global server_port
@@ -68,56 +78,31 @@ async def handle_server():
     except Exception as e:
         error_message = f"Could not connect to server: {str(e)}"
         return
-    #check connection and get player_id
-    reply = await get_server_message(ws_connection, "welcome")
-    if reply == False: return
-    player_id = int(reply["player"])
+    
+    #Add server event listener
+    asyncio.create_task(listen_to_server(ws_connection))
 
-    #Tell server username, and get enemies username
     await ws_connection.send(json.dumps({"type":"username", "name": player_name}))
-    reply = await get_server_message(ws_connection, "username")
-    if reply == False: return
-    enemy_name = reply["name"]
-    still_playing = True
 
-    print("setup done")
-    #Wait for the other players turn if they go first
-    if player_id != 1:
-        print("waiting for other player to guess")
-        reply = await get_server_message(ws_connection, "enemy_guess_result")
-        if reply == False: return
-        enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+    await still_playing.wait()
+
     #loop through the game loop if were still playing and there are no errors yet
-    while not error_message and still_playing:
+    while not error_message and still_playing.is_set():
+        await asyncio.sleep(0.1)
         #if the player has guessed
-        print("waiting for player to guess")
-        await has_guessed.wait()
-        print("Player has guessed")
-        #Tell server guess
-        try:
-            await ws_connection.send(json.dumps({
-                "type":"guess", 
-                "position": [guess[0], guess[1]]}))
-        except Exception as e:
-            error_message = f"Failed to send guess: {str(e)}"
-            return
-        #Get reply on what the result of the guess was
-        reply = await get_server_message(ws_connection, "guess_result")
-        print("Got Result")
-        if reply == False: return
-        user_guessed_squares[guess[0]][guess[1]] = reply["result"]
+        if guess:
+            print("Player has guessed")
+            #Tell server guess
+            try:
+                await ws_connection.send(json.dumps({"type":"guess", "position": [guess[0], guess[1]]}))
+            except Exception as e:
+                error_message = f"Failed to send guess: {str(e)}"
+                return
+            
+            guess = False
 
-        guess = False
-        has_guessed.clear()
-        
-        #Get enemies guess
-        print("waiting for other players guess")
-        reply = await get_server_message(ws_connection, "enemy_guess_result")
-        if reply == False: return
-        enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
-
-        print("other player guessed")
     await ws_connection.send(json.dumps({"type":"disconnection"}))
+    still_playing.clear()
 
 #Client logic
 def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
@@ -305,7 +290,6 @@ async def game() -> None:
     global guess
     global error_message
     global still_playing
-    global has_guessed
     all_sprites = pygame.sprite.Group()
     last_guess = []
 
@@ -318,14 +302,14 @@ async def game() -> None:
 
     asyncio.create_task(handle_server())
 
-    while still_playing == False and not error_message:
+    while still_playing.is_set() == False and not error_message:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
         await asyncio.sleep(0.1)
 
     radar_buttons, guess_button, enemy_buttons = setup_game_board(pygameWidgets.get_scaled_size(50))
 
-    while not error_message and still_playing:
+    while not error_message and still_playing.is_set():
         # Draw the sprites
         all_sprites.draw(__SCREEN)
 
@@ -360,7 +344,6 @@ async def game() -> None:
                 if last_guess and guess_button.pressed(event.pos):
                     guess = [last_guess[0], last_guess[1]]
                     print("guess")
-                    has_guessed.set()
                     await asyncio.sleep(0)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: return
@@ -418,7 +401,7 @@ def get_server_info():
                     server_port = port_input.input.inner_text
                     asyncio.run(game())
                     print("No longer playing")
-                    still_playing = False
+                    still_playing.clear()
                     return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
             elif event.type == pygame.KEYDOWN:
@@ -476,10 +459,7 @@ if __name__ == "__main__":
     enemy_name = "Anonymous"
 
     global still_playing
-    still_playing = False
-
-    global has_guessed
-    has_guessed = asyncio.Event()
+    still_playing = asyncio.Event()
 
     pygame.init()
     

@@ -8,31 +8,58 @@ import os
 
 DEFAULT_PORT = 6363
 MAX_PLAYERS = 2
+global connected_clients
 connected_clients : list[websockets.asyncio.server.ServerConnection] = []
+global players
 players : list = [None, None]
 
 class DisconnectError(Exception): pass
 
-async def get_client_message(socket : websockets.ClientConnection, expected_type : str):
-    reply = json.loads(await socket.recv())
-    print(reply)
+def guess_result(reply : dict):
+    if reply["position"] in [[i, i] for i in range(10)]:
+        return 2
+    return 1
+
+async def client_listner(socket: websockets.asyncio.server.ServerConnection):
+    global connected_clients, players
+    player_id = connected_clients.index(socket)
     try:
-        reply["type"]
-    except:
-        print("Server Error: Corrupted Server Message didn't specify type attribute")
-    if reply["type"] == expected_type:
-        return reply
-    else:
-        if reply["type"] == "error": print(reply["message"])
-        elif reply["type"] == "disconnection": 
-            global connected_clients
-            connected_clients[connected_clients.index(socket)].send(json.dumps({"type":"disconnection"}))
-            raise DisconnectError
-        else: print(f"Server Error: unexpected message of type {reply["type"]}")
-        return False
+        other_socket = connected_clients[player_id * -1 + 1]
+    except: other_socket = None
+
+    while socket in connected_clients:
+        try:
+            reply = json.loads(await socket.recv())
+            print("Received:", reply)
+            if reply["type"] == "username":
+                players[player_id] = reply["name"]
+                print(f"{reply["name"]} joined")
+                print(players)
+                if players[player_id * -1 + 1] != None:
+                    await socket.send(json.dumps({"type": "username", "name": players[player_id * -1 + 1]}))
+                    if other_socket != None:
+                        await other_socket.send(json.dumps({"type":"username", "name": players[player_id]}))
+            elif reply["type"] == "guess":
+                result = guess_result(reply)
+                await socket.send(json.dumps({"type": "guess_result", "position": reply["position"], "result": result}))
+                if other_socket != None:
+                    await other_socket.send(json.dumps({"type": "enemy_guess_result", "position": reply["position"], "result": result}))
+            elif reply["type"] == "disconnection":
+                print(f"{players[player_id]} disconnected")
+                if other_socket != None:
+                    other_socket.send(json.dumps({"type":"disconnection"}))
+                raise DisconnectError
+            elif reply["type"] == "error":
+                print(reply["message"])
+                return
+            else:
+                print(f"Unexpected message type: {reply['type']}")
+                return
+        except Exception as e:
+            print(f"Error received from {players[player_id]}: {e}")
+            raise e
 
 async def handle_client(socket : websockets.asyncio.server.ServerConnection):
-    print("handling client")
     global connected_clients
     global game_ready
     global players
@@ -48,69 +75,17 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     connected_clients.append(socket)
     player_id = len(connected_clients)
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
-    #Get the players username
-    try:
-        message = await get_client_message(socket, "username")
-        if message == False: 1/0
-        players[player_id - 1] = message["name"]
-    except:
-        await socket.send(json.dumps({"type": "error", "message": "Invalid username"}))
-        await socket.close()
-        print("Player connected, but didn't provide name")
 
-    print(f"Player {players[player_id - 1]} joined")
-    #Wait till all players have joined
-    if None not in players:
-        game_ready.set()
-    else:
-        await game_ready.wait()
-    await socket.send(json.dumps({"type": "username", "name": players[player_id * -1 + 2]}))
-
-    #Actual game loop
-    #If player is not player 1
-    if player_id != 1:
-        await guess_sent.wait()
-        data = guess
-        guess = None
-        guess_sent.clear()
-        if data["position"] in [[i, i] for i in range(9)]: # temporary hit/miss code just for testing 
-            await socket.send(json.dumps({"type": "enemy_guess_result", "result": 2, "position": data["position"]}))
-        else: await socket.send(json.dumps({"type": "enemy_guess_result", "result": 1, "position": data["position"]}))
-    #Rest of the game
+    print("client connected")
     try:
-        while game_ready.is_set():
-            #Get the players guess
-            data = await get_client_message("guess")
-            print("sending result")
-            #TODO: Actual hit detection, which would first requre ships to actually be placed somewhere first
-            if data["position"] in [[i, i] for i in range(9)]: # temporary hit/miss code just for testing 
-                print("hit")
-                await socket.send(json.dumps({"type": "guess_result", "result": 2, "position": data["position"]}))
-            else: 
-                print("miss")
-                await socket.send(json.dumps({"type": "guess_result", "result": 1, "position": data["position"]}))
-            print("result sent")
-            #Send out that the guess occured
-            guess = data
-            guess_sent.set()
-            await asyncio.sleep(1)
-            #Get the other players guess
-            await guess_sent.wait()
-            data = guess
-            guess = None
-            guess_sent.clear()
-            if data["position"] in [[i, i] for i in range(9)]: # temporary hit/miss code just for testing 
-                    await socket.send(json.dumps({"type": "enemy_guess_result", "result": 2, "position": data["position"]}))
-            else: await socket.send(json.dumps({"type": "enemy_guess_result", "result": 1, "position": data["position"]}))
-        await socket.send(json.dumps({"type": "disconnection"}))
-    except websockets.exceptions.ConnectionClosed:
-        print(f"Player {players[player_id - 1]} disconnected")
-        connected_clients.remove(socket)
+        asyncio.create_task(client_listner(socket))
+    except Exception as e: raise e
+    while True: await asyncio.sleep(1) 
 
 async def start_server(port : int):
     if type(port) != int: raise TypeError(f"You must supply a an integer port number, not: {port}")
     print("Server up")
-    async with websockets.asyncio.server.serve(handle_client, "localhost", port) as server:
+    async with websockets.asyncio.server.serve(handle_client, "localhost", port, ping_timeout=60) as server:
         while True:
             try:
                 await server.serve_forever()
