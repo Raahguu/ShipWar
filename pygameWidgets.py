@@ -620,6 +620,7 @@ class EntryField(Widget):
             self.has_focus = False
             return
         if event.key == pygame.K_BACKSPACE: 
+            if self.cursor.index == 0: return
             self.input.inner_text = self.input.inner_text[:self.cursor.index - 1] + self.input.inner_text[self.cursor.index:]
             self.cursor.index -= 1
         elif event.key == pygame.K_DELETE: 
