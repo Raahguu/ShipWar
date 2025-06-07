@@ -1,6 +1,7 @@
 #Imports
 import pygame
 import asyncio
+import pygame.gfxdraw
 import websockets
 import json
 import pygameWidgets
@@ -130,18 +131,18 @@ def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_b
     CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 4 * padding) // GRID_SIZE)
 
     can_guess = False
+    circle_radius = CELL_SIZE // 8
     for row in range(GRID_SIZE):
         for col in range(GRID_SIZE):
-            cx = buttons[0][0].rect.left + (col + 0.5) * CELL_SIZE
-            cy = buttons[0][0].rect.top + (row + 0.5) * CELL_SIZE
+            cx, cy = map(int, buttons[row][col].center)
 
             if guessed:
                 match guessed[row][col]:
-                    case 0: pygame.draw.circle(__SCREEN, (80, 80, 80), (cx, cy), CELL_SIZE // 8)
-                    case 1: pygame.draw.circle(__SCREEN, "white", (cx, cy), CELL_SIZE // 8)
-                    case 2: pygame.draw.circle(__SCREEN, "orange", (cx, cy), CELL_SIZE // 8)
-                    case 3: pygame.draw.circle(__SCREEN, "red", (cx, cy), CELL_SIZE // 8)
-                    case 4: pygame.draw.circle(__SCREEN, "blue", (cx, cy), CELL_SIZE // 8); can_guess = True
+                    case 0: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (80, 80, 80))
+                    case 1: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, "white")
+                    case 2: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, "orange")
+                    case 3: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, "red")
+                    case 4: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, "blue"); can_guess = True
     
     if guess_button:
         guess_button.color = "blue" if can_guess else "grey"
