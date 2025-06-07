@@ -28,6 +28,9 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
     except: other_socket = None
 
     while socket in connected_clients:
+        if other_socket == None:
+            try: other_socket = connected_clients[player_id * -1 + 1]
+            except: pass
         try:
             reply = json.loads(await socket.recv())
             print("Received:", reply)
@@ -85,7 +88,7 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
 async def start_server(port : int):
     if type(port) != int: raise TypeError(f"You must supply a an integer port number, not: {port}")
     print("Server up")
-    async with websockets.asyncio.server.serve(handle_client, "localhost", port, ping_timeout=60) as server:
+    async with websockets.asyncio.server.serve(handle_client, "localhost", port, ping_timeout=120) as server:
         while True:
             try:
                 await server.serve_forever()
