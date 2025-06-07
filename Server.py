@@ -28,11 +28,11 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
     except: other_socket = None
 
     while socket in connected_clients:
-        if other_socket == None:
-            try: other_socket = connected_clients[player_id * -1 + 1]
-            except: pass
         try:
             reply = json.loads(await socket.recv())
+            if other_socket == None:
+                try: other_socket = connected_clients[player_id * -1 + 1]
+                except: pass
             print("Received:", reply)
             if reply["type"] == "username":
                 players[player_id] = reply["name"]
@@ -78,8 +78,6 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     connected_clients.append(socket)
     player_id = len(connected_clients)
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
-
-    print("client connected")
     try:
         asyncio.create_task(client_listner(socket))
     except Exception as e: raise e

@@ -104,7 +104,6 @@ async def handle_server():
     await ws_connection.send(json.dumps({"type":"disconnection"}))
     still_playing.clear()
 
-#Client logic
 def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
     global enemy_name
     global player_name
@@ -290,7 +289,6 @@ async def game() -> None:
     global guess
     global error_message
     global still_playing
-    all_sprites = pygame.sprite.Group()
     last_guess = []
 
     global GRID_SIZE
@@ -311,7 +309,7 @@ async def game() -> None:
 
     while not error_message and still_playing.is_set():
         # Draw the sprites
-        all_sprites.draw(__SCREEN)
+        await asyncio.sleep(1/60)
 
         #update boards
         draw_grid(radar_buttons, pygameWidgets.get_scaled_size(50), guess_button, user_guessed_squares)
@@ -324,6 +322,7 @@ async def game() -> None:
         for event in pygame.event.get():
             #Let the player quit the game
             if event.type == pygame.QUIT:
+                asyncio.sleep(1/60)
                 pygame.quit()
                 return
             if event.type == pygame.VIDEORESIZE:
@@ -346,7 +345,9 @@ async def game() -> None:
                     print("guess")
                     await asyncio.sleep(0)
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE: return
+                if event.key == pygame.K_ESCAPE:
+                    asyncio.sleep(1/60) 
+                    return
 
 def get_server_info():
     global __SCREEN
