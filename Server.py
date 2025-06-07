@@ -58,6 +58,13 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
             else:
                 print(f"Unexpected message type: {reply['type']}")
                 return
+        except websockets.exceptions.ConnectionClosedError:
+            print(f"{players[player_id]} Disconnected")
+            if other_socket == None:
+                try: other_socket = connected_clients[player_id * -1 + 1]
+                except: pass
+            if other_socket != None: await other_socket.send(json.dumps({"type":"disconnection"}))
+            return
         except Exception as e:
             print(f"Error received from {players[player_id]}: {e}")
             raise e
