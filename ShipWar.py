@@ -163,7 +163,13 @@ def setup_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = N
 
     buttons = [[None] * GRID_SIZE for i in range(GRID_SIZE)]
 
-    inverted_scaled_cell_size = pygameWidgets.get_scaled_size(CELL_SIZE, scale_reference=__SCREEN.get_size(), current_size=(1280, 700))
+    def get_inverse_scaled_size(target_scaled_size: int, scale_reference=(1280, 700), current_size=None) -> float:
+        current_size = current_size or __SCREEN.get_size()
+        scale_factor = min(current_size[0] / scale_reference[0], current_size[1] / scale_reference[1])
+        return round(target_scaled_size / scale_factor)
+
+    inverted_scaled_cell_size = get_inverse_scaled_size(CELL_SIZE)
+
 
     # Grid buttons and pegs
     for row in range(GRID_SIZE):
@@ -286,6 +292,14 @@ def settings() -> None:
             elif event.type == pygame.KEYDOWN:
                 player_name_entry_field.type(event)
 
+async def place_pieces() -> None:
+    global error_message, __SCREEN
+
+    # while not error_message:
+    #     await asyncio.sleep(1/60)
+
+
+
 async def game() -> None:
     global __SCREEN
     global guess
@@ -306,6 +320,8 @@ async def game() -> None:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
         await asyncio.sleep(0.1)
+
+    await place_pieces()
 
     radar_buttons, guess_button, enemy_buttons = setup_game_board(pygameWidgets.get_scaled_size(50))
 
