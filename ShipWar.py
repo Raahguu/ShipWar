@@ -124,7 +124,7 @@ def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameW
 
     # Right board - Player's ships
     right_x = __SCREEN.get_width() // 2
-    enemy_buttons =  setup_grid(LEFT_TOP=(right_x, padding // 2), title="Game Board", label=True, font_size=font_size, padding=padding, guessed=enemy_guessed_squares)[0]
+    enemy_buttons = setup_grid(LEFT_TOP=(right_x, padding // 2), title="Game Board", label=True, font_size=font_size, padding=padding, guessed=enemy_guessed_squares)[0]
 
     return radar_buttons, guess_button, enemy_buttons
 
@@ -149,10 +149,8 @@ def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_b
         guess_button.color = "blue" if can_guess else "grey"
         guess_button.draw()
 
-def setup_grid(LEFT_TOP, title="", label=False, font_size : pygame.font.Font = None, padding=0, 
+def setup_grid(LEFT_TOP, title="", label=False, font_size : int = 24, padding=0, 
               interactable=False, guessed=None) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button | None]:
-    if not font_size: font_size = 24
-
     CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 4 * padding) // GRID_SIZE)
     grid_px = CELL_SIZE * GRID_SIZE
 
@@ -292,13 +290,41 @@ def settings() -> None:
             elif event.type == pygame.KEYDOWN:
                 player_name_entry_field.type(event)
 
+def setup_place_pieces_board() -> pygameWidgets.Button:
+    global __SCREEN
+
+    __SCREEN.fill("black")
+
+    padding = pygameWidgets.get_scaled_size(30)
+    setup_grid((0, 0), "Your Board", True, padding=padding)
+
+    pygame.draw.line(__SCREEN, "white", (__SCREEN.get_width() * 0.6, 0), (__SCREEN.get_width() * 0.6, __SCREEN.get_height()), 1)
+
+    pieces_title = pygameWidgets.Text(__SCREEN, "Pieces", (__SCREEN.get_width() * 0.8, padding), font_size=24, padding=padding)
+    pieces_title.draw()
+
+    confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", padding, (__SCREEN.get_width() * 0.3, __SCREEN.get_height() - padding))
+    confirm_button.draw()
+
+    return confirm_button
+
 async def place_pieces() -> None:
-    global error_message, __SCREEN
+    global error_message
 
-    # while not error_message:
-    #     await asyncio.sleep(1/60)
+    confirm_button = setup_place_pieces_board()
 
-
+    while not error_message:
+        pygame.display.flip()
+        await asyncio.sleep(1/60)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                await asyncio.sleep(1/60)
+                pygame.quit()
+                return False
+            if event.type == pygame.VIDEORESIZE: confirm_button = setup_place_pieces_board()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return False
+            if event.type == pygame.MOUSEBUTTONDOWN: 
+                if confirm_button.pressed(event.pos): return True
 
 async def game() -> None:
     global __SCREEN
@@ -319,9 +345,14 @@ async def game() -> None:
     while still_playing.is_set() == False and not error_message:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
+            if event.type == pygame.QUIT:
+                await asyncio.sleep(1/60)
+                pygame.quit()
+                return
         await asyncio.sleep(0.1)
 
-    await place_pieces()
+    if (await place_pieces()) == False: return
+    
 
     radar_buttons, guess_button, enemy_buttons = setup_game_board(pygameWidgets.get_scaled_size(50))
 
@@ -340,7 +371,7 @@ async def game() -> None:
         for event in pygame.event.get():
             #Let the player quit the game
             if event.type == pygame.QUIT:
-                asyncio.sleep(1/60)
+                await asyncio.sleep(1/60)
                 pygame.quit()
                 return
             if event.type == pygame.VIDEORESIZE:
@@ -364,7 +395,7 @@ async def game() -> None:
                     await asyncio.sleep(0)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    asyncio.sleep(1/60) 
+                    await asyncio.sleep(1/60) 
                     return
 
 def get_server_info():
