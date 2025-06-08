@@ -290,38 +290,40 @@ def settings() -> None:
             elif event.type == pygame.KEYDOWN:
                 player_name_entry_field.type(event)
 
-def setup_place_pieces_board() -> pygameWidgets.Button:
-    global __SCREEN
-
-    __SCREEN.fill("black")
-
-    padding = pygameWidgets.get_scaled_size(30)
-    setup_grid((0, 0), "Your Board", True, padding=padding)
-
-    pygame.draw.line(__SCREEN, "white", (__SCREEN.get_width() * 0.6, 0), (__SCREEN.get_width() * 0.6, __SCREEN.get_height()), 1)
-
-    pieces_title = pygameWidgets.Text(__SCREEN, "Pieces", (__SCREEN.get_width() * 0.8, padding), font_size=24, padding=padding)
-    pieces_title.draw()
-
-    confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", padding, (__SCREEN.get_width() * 0.3, __SCREEN.get_height() - padding))
-    confirm_button.draw()
-
-    return confirm_button
+def place_pieces_draw_ships() -> None:
+    pass
 
 async def place_pieces() -> None:
-    global error_message
+    global error_message, __SCREEN
 
-    confirm_button = setup_place_pieces_board()
+    pieces_title = pygameWidgets.Text(__SCREEN, "Pieces", (0, 0), font_size=24)
+    confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", 0, (0, 0))
 
     while not error_message:
+        __SCREEN.fill("black")
+
+        padding = pygameWidgets.get_scaled_size(30)
+        setup_grid((0, 0), "Your Board", True, padding=padding)
+
+        pygame.draw.line(__SCREEN, "white", (__SCREEN.get_width() * 0.6, 0), (__SCREEN.get_width() * 0.6, __SCREEN.get_height()), 1)
+
+        pieces_title.center = (__SCREEN.get_width() * 0.8, padding)
+        pieces_title.draw()
+        confirm_button._block_calcs = True
+        confirm_button.padding = padding
+        confirm_button._block_calcs = False
+        confirm_button.center = (__SCREEN.get_width() * 0.3, __SCREEN.get_height() - padding)
+        confirm_button.draw()
+
+        place_pieces_draw_ships()
         pygame.display.flip()
+    
         await asyncio.sleep(1/60)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 await asyncio.sleep(1/60)
                 pygame.quit()
                 return False
-            if event.type == pygame.VIDEORESIZE: confirm_button = setup_place_pieces_board()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return False
             if event.type == pygame.MOUSEBUTTONDOWN: 
                 if confirm_button.pressed(event.pos): return True
@@ -450,7 +452,6 @@ def get_server_info():
                     server_ip = ip_input.input.inner_text
                     server_port = port_input.input.inner_text
                     asyncio.run(game())
-                    print("No longer playing")
                     still_playing.clear()
                     return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
