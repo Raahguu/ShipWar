@@ -70,6 +70,9 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
         except websockets.exceptions.ConnectionClosedError:
             await disconnect(player_id)
             return
+        except websockets.exceptions.ConnectionClosedOK:
+            await disconnect(player_id)
+            return
         except Exception as e:
             print(f"Error received from {players[player_id]}: {e}")
             raise e

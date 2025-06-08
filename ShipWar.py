@@ -189,7 +189,7 @@ def setup_grid(LEFT_TOP, title="", label=False, font_size : int = 24, padding=0,
     
     #Confirm guess button
     if interactable and guessed:
-        guess_button = pygameWidgets.Button(__SCREEN, "Confirm Guess", 20, [title_text.center[0], title_text.rect.bottom + title_text.rect.height + grid_px + 0.75 * padding], "grey")
+        guess_button = pygameWidgets.Button(__SCREEN, "Confirm", 20, [title_text.center[0], title_text.rect.bottom + title_text.rect.height + grid_px + 0.75 * padding], "grey")
         guess_button.draw()
 
     return buttons, guess_button if interactable else None
