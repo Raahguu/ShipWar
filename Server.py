@@ -98,7 +98,7 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
 async def start_server(port : int):
     if type(port) != int: raise TypeError(f"You must supply a an integer port number, not: {port}")
     print("Server up")
-    async with websockets.asyncio.server.serve(handle_client, "localhost", port, ping_timeout=120) as server:
+    async with websockets.asyncio.server.serve(handle_client, "localhost", port) as server:
         await server.serve_forever()
                 
 

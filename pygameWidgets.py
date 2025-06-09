@@ -671,7 +671,6 @@ class Ship(Widget):
         if not self.being_held: return False
 
         new_diff = [mouse_pos[0] - self.top_left[0], mouse_pos[1] - self.top_left[1]]
-        print(new_diff)
 
         try:
             if self.__mouse_left_top_diff == None: 1/0

@@ -96,7 +96,6 @@ async def handle_server():
         await asyncio.sleep(0.1)
         #if the player has guessed
         if guess:
-            print("Player has guessed")
             #Tell server guess
             try:
                 await ws_connection.send(json.dumps({"type":"guess", "position": [guess[0], guess[1]]}))
@@ -401,7 +400,6 @@ async def game() -> None:
                             user_guessed_squares[row][col] = 4
                 if last_guess and guess_button.pressed(event.pos):
                     guess = [last_guess[0], last_guess[1]]
-                    print("guess")
                     await asyncio.sleep(0)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
