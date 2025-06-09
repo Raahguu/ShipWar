@@ -28,7 +28,7 @@ async def disconnect(player_id : int):
     except: other_socket = None
     if other_socket != None: await other_socket.send(json.dumps({"type":"disconnection"}))
     
-    players = [None, None]
+    players[player_id] = None
     connected_clients = []
 
 async def client_listner(socket: websockets.asyncio.server.ServerConnection):
@@ -85,7 +85,7 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     if len(connected_clients) >= MAX_PLAYERS:
         await socket.send(json.dumps({"type": "error", "message": "Match full"}))
         await socket.close()
-        print("Player attempted to connect, but match is full")
+        print("Client attempted to connect, but match is full")
         return
     #Send the player a welcome message
     connected_clients.append(socket)
