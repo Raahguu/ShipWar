@@ -656,12 +656,13 @@ class Ship(Widget):
             for block in col:
                 pygame.draw.rect(self.screen, self.color, block)
                 pygame.draw.rect(self.screen, "white", block, 1)
-        pygame.draw.circle(self.screen, "red", self.top_left, 2)
 
     def flip_dragging(self, event : pygame.event.Event):
         if not any(block.collidepoint(event.pos) for col in self.blocks for block in col): 
-            if self.being_held: self.being_held = False
-            return False
+            if self.being_held: 
+                self.being_held = False
+                self.__mouse_left_top_diff = None
+            return 
 
         self.being_held = not self.being_held
         if not self.being_held: self.__mouse_left_top_diff = None
@@ -669,15 +670,11 @@ class Ship(Widget):
     def drag(self, mouse_pos : tuple[int, int]):
         if not self.being_held: return False
 
-        new_diff = [mouse_pos[0] - self.top_left[0], mouse_pos[0] - self.top_left[1]]
+        new_diff = [mouse_pos[0] - self.top_left[0], mouse_pos[1] - self.top_left[1]]
+        print(new_diff)
 
         try:
             if self.__mouse_left_top_diff == None: 1/0
             if new_diff != self.__mouse_left_top_diff:
                 self.top_left = [mouse_pos[0] - self.__mouse_left_top_diff[0], mouse_pos[1] - self.__mouse_left_top_diff[1]]
-        except: 
-            self.__mouse_left_top_diff = new_diff
-        
-        # print(self.__mouse_left_top_diff)
-        # print(self.top_left)
-        # print(mouse_pos)
+        except: self.__mouse_left_top_diff = new_diff
