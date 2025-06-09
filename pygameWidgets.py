@@ -13,6 +13,29 @@ def get_scaled_size(base_size : int, min_size : int = 1, max_size : int = None, 
     if type(base_size) is int: return round(scaled_size)
     else: return scaled_size
 
+def display_error_box(screen : pygame.Surface, error_message : str) -> None:
+    scroll = TextArea(screen, [1000, 500], [0, 0],
+                                        error_message
+                                        , padding=[15, 15])
+
+    while True:
+        screen.fill("black")
+        scroll.center=[screen.get_width() // 2, screen.get_height() // 2]
+        scroll.draw()
+        ok_button = Button(screen, "OK", 10, [scroll.center[0], scroll.rect.bottom + get_scaled_size(25)], "blue")
+        ok_button.draw()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if ok_button.pressed(event.pos):
+                    return
+            elif event.type == pygame.MOUSEWHEEL:
+                scroll.scroll_bar.scroll(event)
+
+        pygame.display.flip()
 
 class Widget(metaclass=abc.ABCMeta):
     @classmethod

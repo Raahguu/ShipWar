@@ -6,39 +6,11 @@ import websockets
 import json
 import pygameWidgets
 
-def display_error_box() -> None:
-    global error_message
-    global __SCREEN
-
-    scroll = pygameWidgets.TextArea(__SCREEN, [1000, 500], [0, 0],
-                                        error_message
-                                        , padding=[15, 15])
-
-    while True:
-        __SCREEN.fill("black")
-        scroll.center=[__SCREEN.get_width() // 2, __SCREEN.get_height() // 2]
-        scroll.draw()
-        ok_button = pygameWidgets.Button(__SCREEN, "OK", 10, [scroll.center[0], scroll.rect.bottom + pygameWidgets.get_scaled_size(25)], "blue")
-        ok_button.draw()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if ok_button.pressed(event.pos):
-                    pygame.quit()
-                    exit()
-            elif event.type == pygame.MOUSEWHEEL:
-                scroll.scroll_bar.scroll(event)
-
-        pygame.display.flip()
-
 def get_cell_size(screen : pygame.Surface, padding : int):
     global GRID_SIZE
     return int(min(screen.get_width() / 2 - 2 * padding, screen.get_height() - 4 * padding) // GRID_SIZE)
 
-async def listen_to_server(socket: websockets.ClientConnection):
+async def listen_to_server(socket: websockets.ClientConnection) -> None:
     global error_message, user_guessed_squares, enemy_guessed_squares, player_id, enemy_name, still_playing
     while still_playing:
         try:
@@ -525,5 +497,5 @@ if __name__ == "__main__":
     pygameWidgets.SCREEN = __SCREEN
 
     main()
-    if error_message: display_error_box()
+    if error_message: pygameWidgets.display_error_box(__SCREEN, error_message)
     pygame.quit()
