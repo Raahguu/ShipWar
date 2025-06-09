@@ -636,3 +636,48 @@ class EntryField(Widget):
             if self.input.font.size(self.input.inner_text + event.unicode)[0] >= self.width - self.input.padding[0] * 2: return
             self.input.inner_text = self.input.inner_text[:self.cursor.index] + event.unicode + self.input.inner_text[self.cursor.index:]
             self.cursor.index += 1
+
+class Ship(Widget):
+    def __init__(self, screen : pygame.surface, top_left : list[int, int], cell_size : int, dimensions : list[int, int], color : list[int, int, int] = "green"):
+        self.screen = screen
+        self.top_left = top_left
+        self.cell_size = cell_size
+        self.dimensions = dimensions
+        self.color = color
+
+        self.being_held = False
+    
+    def _calc_rect(self):
+        self.blocks = [[pygame.Rect(self.top_left[0] + col * self.cell_size, self.top_left[1] + row * self.cell_size, self.cell_size, self.cell_size) for col in range(self.dimensions[0])] for row in range(self.dimensions[1])]
+
+    def draw(self):
+        self._calc_rect()
+        for col in self.blocks:
+            for block in col:
+                pygame.draw.rect(self.screen, self.color, block)
+                pygame.draw.rect(self.screen, "white", block, 1)
+        pygame.draw.circle(self.screen, "red", self.top_left, 2)
+
+    def flip_dragging(self, event : pygame.event.Event):
+        if not any(block.collidepoint(event.pos) for col in self.blocks for block in col): 
+            if self.being_held: self.being_held = False
+            return False
+
+        self.being_held = not self.being_held
+        if not self.being_held: self.__mouse_left_top_diff = None
+
+    def drag(self, mouse_pos : tuple[int, int]):
+        if not self.being_held: return False
+
+        new_diff = [mouse_pos[0] - self.top_left[0], mouse_pos[0] - self.top_left[1]]
+
+        try:
+            if self.__mouse_left_top_diff == None: 1/0
+            if new_diff != self.__mouse_left_top_diff:
+                self.top_left = [mouse_pos[0] - self.__mouse_left_top_diff[0], mouse_pos[1] - self.__mouse_left_top_diff[1]]
+        except: 
+            self.__mouse_left_top_diff = new_diff
+        
+        # print(self.__mouse_left_top_diff)
+        # print(self.top_left)
+        # print(mouse_pos)

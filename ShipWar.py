@@ -34,6 +34,10 @@ def display_error_box() -> None:
 
         pygame.display.flip()
 
+def get_cell_size(screen : pygame.Surface, padding : int):
+    global GRID_SIZE
+    return int(min(screen.get_width() / 2 - 2 * padding, screen.get_height() - 4 * padding) // GRID_SIZE)
+
 async def listen_to_server(socket: websockets.ClientConnection):
     global error_message, user_guessed_squares, enemy_guessed_squares, player_id, enemy_name, still_playing
     while still_playing:
@@ -129,10 +133,8 @@ def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameW
     return radar_buttons, guess_button, enemy_buttons
 
 def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_button : pygameWidgets.Button = None, guessed=None):
-    CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 4 * padding) // GRID_SIZE)
-
     can_guess = False
-    circle_radius = CELL_SIZE // 8
+    circle_radius = get_cell_size(__SCREEN, padding) // 8
     for row in range(GRID_SIZE):
         for col in range(GRID_SIZE):
             cx, cy = map(int, buttons[row][col].center)
@@ -151,7 +153,7 @@ def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_b
 
 def setup_grid(LEFT_TOP, title="", label=False, font_size : int = 24, padding=0, 
               interactable=False, guessed=None) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button | None]:
-    CELL_SIZE = int(min(__SCREEN.get_width() / 2 - 2 * padding, __SCREEN.get_height() - 4 * padding) // GRID_SIZE)
+    CELL_SIZE = get_cell_size(__SCREEN, padding)
     grid_px = CELL_SIZE * GRID_SIZE
 
     # Title
@@ -290,16 +292,16 @@ def settings() -> None:
             elif event.type == pygame.KEYDOWN:
                 player_name_entry_field.type(event)
 
-def place_pieces_draw_ships() -> None:
-    pass
-
 async def place_pieces() -> None:
     global error_message, __SCREEN
 
     pieces_title = pygameWidgets.Text(__SCREEN, "Pieces", (0, 0), font_size=24)
     confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", 0, (0, 0))
+    ship_1 = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], pieces_title.center[1] + pygameWidgets.get_scaled_size(60)), 1, [1, 4])
 
     while not error_message:
+        await asyncio.sleep(1/60)
+
         __SCREEN.fill("black")
 
         padding = pygameWidgets.get_scaled_size(30)
@@ -315,10 +317,11 @@ async def place_pieces() -> None:
         confirm_button.center = (__SCREEN.get_width() * 0.3, __SCREEN.get_height() - padding)
         confirm_button.draw()
 
-        place_pieces_draw_ships()
+        ship_cell_size = get_cell_size(__SCREEN, padding)
+        ship_1.cell_size = ship_cell_size
+        ship_1.draw()
+
         pygame.display.flip()
-    
-        await asyncio.sleep(1/60)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 await asyncio.sleep(1/60)
@@ -327,6 +330,11 @@ async def place_pieces() -> None:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return False
             if event.type == pygame.MOUSEBUTTONDOWN: 
                 if confirm_button.pressed(event.pos): return True
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 or event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                ship_1.flip_dragging(event)
+        #if mouse's left button is held down
+        if pygame.mouse.get_pressed()[0]:
+            ship_1.drag(pygame.mouse.get_pos())
 
 async def game() -> None:
     global __SCREEN
