@@ -687,10 +687,11 @@ class Ship(Widget):
             if self.being_held: 
                 self.being_held = False
                 self.__mouse_left_top_diff = None
-            return 
+            return False
 
         self.being_held = not self.being_held
         if not self.being_held: self.__mouse_left_top_diff = None
+        return True
 
     def drag(self, mouse_pos : tuple[int, int]):
         if not self.being_held: return False

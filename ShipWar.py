@@ -97,7 +97,7 @@ def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameW
     # Left board - Radar (shots fired)
     radar_buttons, guess_button = setup_grid(LEFT_TOP=(0, padding // 2), title="Radar", label=True, font_size=font_size, padding=padding, interactable=True, guessed=user_guessed_squares)
 
-    # Right board - Player's ships
+    # Right board - Player'submarine_ship ships
     right_x = __SCREEN.get_width() // 2
     enemy_buttons = setup_grid(LEFT_TOP=(right_x, padding // 2), title="Game Board", label=True, font_size=font_size, padding=padding, guessed=enemy_guessed_squares)[0]
 
@@ -266,31 +266,54 @@ def settings() -> None:
 async def place_pieces() -> None:
     global error_message, __SCREEN
 
-    pieces_title = pygameWidgets.Text(__SCREEN, "Pieces", (0, 0), font_size=24)
-    confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", 0, (0, 0))
-    ship_1 = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], pieces_title.center[1] + pygameWidgets.get_scaled_size(60)), 1, [2, 4])
+    #Center calculations
+    padding_calc = lambda: pygameWidgets.get_scaled_size(30)
+
+    pieces_title_center_calc = lambda: (__SCREEN.get_width() * 0.8, padding_calc())
+    confirm_button_center_calc = lambda: (__SCREEN.get_width() * 0.3, __SCREEN.get_height() - padding_calc())
+    dividing_line_start_point_calc = lambda: (__SCREEN.get_width() * 0.6, 0)
+    dividing_line_end_point_calc = lambda: (__SCREEN.get_width() * 0.6, __SCREEN.get_height())
+
+    starting_ship_y_padding = pygameWidgets.get_scaled_size(30)
+
+    pieces_title = pygameWidgets.Text(__SCREEN, "Pieces", pieces_title_center_calc(), font_size=24)
+    confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", 0, confirm_button_center_calc())
+    destroyer_ship = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], starting_ship_y_padding + __SCREEN.get_height() // 6), 1, [2, 1])
+    submarine_ship = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], starting_ship_y_padding + 2 * __SCREEN.get_height() // 6), 1, [3, 1])
+    cruiser_ship = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], starting_ship_y_padding + 3 * __SCREEN.get_height() // 6), 1, [3, 1])
+    battleship_ship = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], starting_ship_y_padding + 4 * __SCREEN.get_height() // 6), 1, [4, 1])
+    carrier_ship = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], starting_ship_y_padding + 5 * __SCREEN.get_height() // 6), 1, [5, 1])
 
     while not error_message:
         await asyncio.sleep(1/60)
 
         __SCREEN.fill("black")
 
-        padding = pygameWidgets.get_scaled_size(30)
-        setup_grid((0, 0), "Your Board", True, padding=padding)
+        setup_grid((0, 0), "Your Board", True, padding=padding_calc())
 
-        pygame.draw.line(__SCREEN, "white", (__SCREEN.get_width() * 0.6, 0), (__SCREEN.get_width() * 0.6, __SCREEN.get_height()), 1)
+        pygame.draw.line(__SCREEN, "white", dividing_line_start_point_calc(), dividing_line_end_point_calc(), 1)
 
-        pieces_title.center = (__SCREEN.get_width() * 0.8, padding)
+        pieces_title.center = pieces_title_center_calc()
         pieces_title.draw()
         confirm_button._block_calcs = True
-        confirm_button.padding = padding
+        confirm_button.padding = padding_calc()
         confirm_button._block_calcs = False
-        confirm_button.center = (__SCREEN.get_width() * 0.3, __SCREEN.get_height() - padding)
+        confirm_button.center = confirm_button_center_calc()
         confirm_button.draw()
 
-        ship_cell_size = get_cell_size(__SCREEN, padding)
-        ship_1.cell_size = ship_cell_size
-        ship_1.draw()
+        ship_cell_size = get_cell_size(__SCREEN, padding_calc())
+        destroyer_ship.cell_size = ship_cell_size
+        submarine_ship.cell_size = ship_cell_size
+        cruiser_ship.cell_size = ship_cell_size
+        battleship_ship.cell_size = ship_cell_size                
+        carrier_ship.cell_size = ship_cell_size                                                
+        
+        destroyer_ship.draw()
+        submarine_ship.draw()
+        cruiser_ship.draw()
+        battleship_ship.draw()                
+        carrier_ship.draw()                                                
+        
 
         pygame.display.flip()
         for event in pygame.event.get():
@@ -302,12 +325,27 @@ async def place_pieces() -> None:
             if event.type == pygame.MOUSEBUTTONDOWN: 
                 if confirm_button.pressed(event.pos): return True
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 or event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                ship_1.flip_dragging(event)
+                if destroyer_ship.flip_dragging(event): continue
+                if submarine_ship.flip_dragging(event): continue
+                if cruiser_ship.flip_dragging(event): continue
+                if battleship_ship.flip_dragging(event): continue
+                carrier_ship.flip_dragging(event)
+                
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                ship_1.rotate(event)
-        #if mouse's left button is held down
+                destroyer_ship.rotate(event)
+                submarine_ship.rotate(event)
+                cruiser_ship.rotate(event)
+                battleship_ship.rotate(event)
+                carrier_ship.rotate(event)
+                
+        #if mouse'submarine_ship left button is held down
         if pygame.mouse.get_pressed()[0]:
-            ship_1.drag(pygame.mouse.get_pos())
+            destroyer_ship.drag(pygame.mouse.get_pos())
+            submarine_ship.drag(pygame.mouse.get_pos())
+            cruiser_ship.drag(pygame.mouse.get_pos())
+            battleship_ship.drag(pygame.mouse.get_pos())
+            carrier_ship.drag(pygame.mouse.get_pos())
+            
 
 async def game() -> None:
     global __SCREEN
