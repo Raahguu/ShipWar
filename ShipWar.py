@@ -268,7 +268,7 @@ async def place_pieces() -> None:
 
     pieces_title = pygameWidgets.Text(__SCREEN, "Pieces", (0, 0), font_size=24)
     confirm_button = pygameWidgets.Button(__SCREEN, "Confirm", 0, (0, 0))
-    ship_1 = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], pieces_title.center[1] + pygameWidgets.get_scaled_size(60)), 1, [1, 4])
+    ship_1 = pygameWidgets.Ship(__SCREEN, (pieces_title.center[0], pieces_title.center[1] + pygameWidgets.get_scaled_size(60)), 1, [2, 4])
 
     while not error_message:
         await asyncio.sleep(1/60)
@@ -303,6 +303,8 @@ async def place_pieces() -> None:
                 if confirm_button.pressed(event.pos): return True
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 or event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 ship_1.flip_dragging(event)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                ship_1.rotate(event)
         #if mouse's left button is held down
         if pygame.mouse.get_pressed()[0]:
             ship_1.drag(pygame.mouse.get_pos())

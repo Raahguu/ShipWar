@@ -671,7 +671,9 @@ class Ship(Widget):
         self.being_held = False
     
     def _calc_rect(self):
-        self.blocks = [[pygame.Rect(self.top_left[0] + col * self.cell_size, self.top_left[1] + row * self.cell_size, self.cell_size, self.cell_size) for col in range(self.dimensions[0])] for row in range(self.dimensions[1])]
+        self.blocks = [[pygame.Rect(self.top_left[0] + col * self.cell_size, self.top_left[1] + row * self.cell_size, self.cell_size, self.cell_size) 
+                        for col in [i * self.dimensions[0] / abs(self.dimensions[0]) for i in range(abs(self.dimensions[0]))]]
+                        for row in [i * self.dimensions[1] / abs(self.dimensions[1]) for i in range(abs(self.dimensions[1]))]]
 
     def draw(self):
         self._calc_rect()
@@ -700,3 +702,7 @@ class Ship(Widget):
             if new_diff != self.__mouse_left_top_diff:
                 self.top_left = [mouse_pos[0] - self.__mouse_left_top_diff[0], mouse_pos[1] - self.__mouse_left_top_diff[1]]
         except: self.__mouse_left_top_diff = new_diff
+    
+    def rotate(self, event : pygame.event.Event):
+        if not self.being_held or event.type != pygame.KEYDOWN or event.key != pygame.K_r: return False
+        self.dimensions = [self.dimensions[1], self.dimensions[0] * -1]
