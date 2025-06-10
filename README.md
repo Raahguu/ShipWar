@@ -46,22 +46,16 @@ Another Note: If you have mutiple IPs show up, then you can probably use any of 
 4444
 ```
 ```
-5555
+1234
 ```
 ```
 6363
-```
-```
-7777
-```
-```
-8766
 ```
 ```
 8888
 ```
 
 ## Future
-I hope to in the future, allow spectators to watch a match, and allow for servers to be hosted locally on one's device rather than in a docker container.
+I hope to in the future, allow spectators to watch a match.
 
 This will not be supporting `MacOS`, or an `IOS` of any kind, if you want to figure out how to set it up for that, good luck. 
