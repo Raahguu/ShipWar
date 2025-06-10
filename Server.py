@@ -6,15 +6,6 @@ import websockets.asyncio.server
 import sys
 import os
 
-DEFAULT_PORT = 6363
-MAX_PLAYERS = 2
-global connected_clients
-connected_clients : list[websockets.asyncio.server.ServerConnection] = []
-global players
-players : list = [None, None]
-
-class DisconnectError(Exception): pass
-
 def guess_result(reply : dict):
     if reply["position"] in [[i, i] for i in range(10)]:
         return 2
@@ -103,6 +94,13 @@ async def start_server(port : int):
                 
 
 if __name__ == "__main__":
+    DEFAULT_PORT = 6363
+    MAX_PLAYERS = 2
+    global connected_clients
+    connected_clients : list[websockets.asyncio.server.ServerConnection] = []
+    global players
+    players : list = [None, None]
+
     try:
         if sys.argv[1] != "Docker": 1/0
         #this means the server is running in a docker container
