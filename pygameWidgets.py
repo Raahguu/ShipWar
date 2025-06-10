@@ -661,26 +661,42 @@ class EntryField(Widget):
             self.cursor.index += 1
 
 class Ship(Widget):
-    def __init__(self, screen : pygame.surface, top_left : list[int, int], cell_size : int, dimensions : list[int, int], color : list[int, int, int] = "green"):
+    def __init__(self, screen : pygame.surface, top_left : list[int, int], cell_size : int, 
+                 dimensions : list[int, int], alive_color : list[int, int, int] = "blue", dead_color : list[int, int, int] = "grey"):
         self.screen = screen
         self.top_left = top_left
         self.cell_size = cell_size
         self.dimensions = dimensions
-        self.color = color
+        self.alive_color = alive_color
+        self.dead_color = dead_color
 
         self.being_held = False
+        self.alive = True
     
     def _calc_rect(self):
         self.blocks = [[pygame.Rect(self.top_left[0] + col * self.cell_size, self.top_left[1] + row * self.cell_size, self.cell_size, self.cell_size) 
                         for col in [i * self.dimensions[0] / abs(self.dimensions[0]) for i in range(abs(self.dimensions[0]))]]
                         for row in [i * self.dimensions[1] / abs(self.dimensions[1]) for i in range(abs(self.dimensions[1]))]]
+        
+        border_left = self.top_left[0]
+        border_top = self.top_left[1]
+
+        outer_border_dimensions = [self.dimensions[0] * self.cell_size, self.dimensions[1] * self.cell_size]
+        if outer_border_dimensions[0] < 0:
+            border_left += outer_border_dimensions[0] + self.cell_size
+        if outer_border_dimensions[1] < 0:
+            border_top += outer_border_dimensions[1] + self.cell_size
+        outer_border_dimensions = [abs(dimension) for dimension in  outer_border_dimensions]
+
+        self.border_rect = pygame.Rect([border_left, border_top], outer_border_dimensions)
 
     def draw(self):
         self._calc_rect()
         for col in self.blocks:
             for block in col:
-                pygame.draw.rect(self.screen, self.color, block)
-                pygame.draw.rect(self.screen, "white", block, 1)
+                pygame.draw.rect(self.screen, self.alive_color if self.alive else self.dead_color, block)
+                pygame.draw.rect(self.screen, (100, 100, 100) if self.alive else "black", block, 1)
+        pygame.draw.rect(self.screen, "white" if self.alive else "red", self.border_rect, 1)
 
     def flip_dragging(self, event : pygame.event.Event):
         if not any(block.collidepoint(event.pos) for col in self.blocks for block in col): 
