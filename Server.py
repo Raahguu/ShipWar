@@ -6,46 +6,64 @@ import websockets.asyncio.server
 import sys
 import os
 
-def guess_result(reply : dict):
-    if reply["position"] in [[i, i] for i in range(10)]:
-        return 2
+def guess_result(reply : dict, index : int) -> int:
+    if reply["type"] != "guess": return 0
+
+    global players_ships
+    opponents_ships = players_ships[1 - index]
+    for ship_locations in opponents_ships:
+        for location in ship_locations:
+            if location[::-1] == reply["position"]: return 2 # the result was a hit
     return 1
+
+
+def ship_handling(index : int, reply : dict):
+    if reply["type"] != "ships": return False
+
+    global players_ships
+    players_ships[index] = reply["message"]
 
 async def disconnect(player_id : int):
     global players
     global connected_clients
     print(f"{players[player_id]} Disconnected")
-    try: other_socket = connected_clients[player_id * -1 + 1]
+    try: other_socket = connected_clients[1 - player_id]
     except: other_socket = None
     if other_socket != None: await other_socket.send(json.dumps({"type":"disconnection"}))
     
     players[player_id] = None
     connected_clients = []
 
+    global players_ships, game_result
+    players_ships = [None, None]
+    game_result = [None, None]
+
 async def client_listner(socket: websockets.asyncio.server.ServerConnection):
     global connected_clients, players
     player_id = connected_clients.index(socket)
     try:
-        other_socket = connected_clients[player_id * -1 + 1]
+        other_socket = connected_clients[1 - player_id]
     except: other_socket = None
 
     while socket in connected_clients:
         try:
             reply = json.loads(await socket.recv())
             if other_socket == None:
-                try: other_socket = connected_clients[player_id * -1 + 1]
+                try: other_socket = connected_clients[1 - player_id]
                 except: pass
             print("Received:", reply)
             if reply["type"] == "username":
                 players[player_id] = reply["name"]
                 print(f"{reply["name"]} joined")
                 print(players)
-                if players[player_id * -1 + 1] != None:
-                    await socket.send(json.dumps({"type": "username", "name": players[player_id * -1 + 1]}))
+                if players[1 - player_id] != None:
+                    await socket.send(json.dumps({"type": "username", "name": players[1 - player_id]}))
                     if other_socket != None:
                         await other_socket.send(json.dumps({"type":"username", "name": players[player_id]}))
+            elif reply["type"] == "ships": 
+                ship_handling(player_id, reply)
             elif reply["type"] == "guess":
-                result = guess_result(reply)
+                result = guess_result(reply, player_id)
                 await socket.send(json.dumps({"type": "guess_result", "position": reply["position"], "result": result}))
                 if other_socket != None:
                     await other_socket.send(json.dumps({"type": "enemy_guess_result", "position": reply["position"], "result": result}))
@@ -84,7 +102,8 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
 
     asyncio.create_task(client_listner(socket))
-    while socket in connected_clients: await asyncio.sleep(1) 
+    while socket in connected_clients and game_result == [None, None]: await asyncio.sleep(1) 
+    if game_result != [None, None]: await socket.send(json.dumps({"type": "done", "result": game_result[player_id - 1]}))
 
 async def start_server(port : int):
     if type(port) != int: raise TypeError(f"You must supply a an integer port number, not: {port}")
@@ -100,6 +119,10 @@ if __name__ == "__main__":
     connected_clients : list[websockets.asyncio.server.ServerConnection] = []
     global players
     players : list = [None, None]
+    global players_ships
+    players_ships : list[list[list[list[int, int]]]] = [None, None]
+    global game_result
+    game_result = [None, None]
 
     try:
         if sys.argv[1] != "Docker": 1/0

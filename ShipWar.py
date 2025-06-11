@@ -40,14 +40,7 @@ async def listen_to_server(socket: websockets.ClientConnection) -> None:
 
 #Server connection logic
 async def handle_server():
-    global guess
-    global error_message
-    global server_ip
-    global server_port
-    global still_playing
-    global player_name
-    global player_id
-    global enemy_name
+    global guess, error_message, server_ip, server_port, still_playing, player_name, player_id, enemy_name, ships_placed, ship_objs
 
     #connect to the server
     try:
@@ -60,6 +53,22 @@ async def handle_server():
     asyncio.create_task(listen_to_server(ws_connection))
 
     await ws_connection.send(json.dumps({"type":"username", "name": player_name}))
+
+    #When ready to send the ships, send them
+    await ships_placed.wait()
+    try:
+        message : list[list[list[int, int]]] = []
+        for ship in ship_objs:
+            curr_ship_locations : list[list[int, int]] = []
+            for col in ship.blocks:
+                for block in col:
+                    cell_numbers = [(block.topleft[0] - ship.grid_origin[0]) / ship.cell_size, (block.topleft[1] - ship.grid_origin[1]) / ship.cell_size]
+                    curr_ship_locations.append(cell_numbers)
+            message.append(curr_ship_locations)
+        await ws_connection.send(json.dumps({"type":"ships", "message": message}))
+    except Exception as e:
+        error_message = f"Failed to send ship locations to server. Error: {str(e)}"
+        return
 
     await still_playing.wait()
 
@@ -112,11 +121,11 @@ def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_b
 
             if guessed:
                 match guessed[row][col]:
-                    case 0: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (80, 80, 80))
-                    case 1: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 255, 255))
-                    case 2: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 165, 0))
-                    case 3: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 0, 0))
-                    case 4: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (0, 0, 255)); can_guess = True
+                    case 0: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (80, 80, 80)) # grey for base color
+                    case 1: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 255, 255)) # white for miss
+                    case 2: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 165, 0)) # orange for hit, but not sink/sunk
+                    case 3: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (255, 0, 0)) # red for sink/sunk
+                    case 4: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (0, 0, 255)); can_guess = True # blue for the one the player is currently going to guess
     
     if guess_button:
         guess_button.color = "blue" if can_guess else "grey"
@@ -263,6 +272,19 @@ def settings() -> None:
             elif event.type == pygame.KEYDOWN:
                 player_name_entry_field.type(event)
 
+def send_ship_locations(ship_2 : pygameWidgets.Ship, ship_3a : pygameWidgets.Ship, ship_3b : pygameWidgets.Ship, ship_4 : pygameWidgets.Ship, ship_5 : pygameWidgets.Ship) -> True:
+    global ships_placed
+    global ship_objs
+
+    ship_objs = [ship_2, ship_3a, ship_3b, ship_4, ship_5]
+    ships_placed.set()
+
+    return True
+
+def validate_ship_positions(ships : pygameWidgets.Ship) -> bool:
+    #TODO: Some input validation to ensure that all the ships locations are valid/on the board
+    return True
+
 async def place_pieces() -> None:
     global error_message, __SCREEN
 
@@ -287,6 +309,8 @@ async def place_pieces() -> None:
     while not error_message:
         await asyncio.sleep(1/60)
 
+        valid_ship_positions = validate_ship_positions([destroyer_ship, submarine_ship, cruiser_ship, battleship_ship, carrier_ship])
+
         __SCREEN.fill("black")
 
         grid_buttons = setup_grid((0, 0), "Your Board", True, padding=padding_calc())
@@ -297,6 +321,7 @@ async def place_pieces() -> None:
         pieces_title.draw()
         confirm_button._block_calcs = True
         confirm_button.padding = padding_calc()
+        confirm_button.color = "blue" if valid_ship_positions else "grey"
         confirm_button._block_calcs = False
         confirm_button.center = confirm_button_center_calc()
         confirm_button.draw()
@@ -330,7 +355,9 @@ async def place_pieces() -> None:
                 return False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return False
             if event.type == pygame.MOUSEBUTTONDOWN: 
-                if confirm_button.pressed(event.pos): return True
+                if confirm_button.pressed(event.pos) and valid_ship_positions: 
+                    send_ship_locations(destroyer_ship, submarine_ship, cruiser_ship, battleship_ship, carrier_ship)
+                    return True
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 or event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if destroyer_ship.flip_dragging(event): continue
                 if submarine_ship.flip_dragging(event): continue
@@ -536,6 +563,12 @@ if __name__ == "__main__":
 
     global still_playing
     still_playing = asyncio.Event()
+
+    global ships_placed
+    ships_placed = asyncio.Event()
+
+    global ship_objs
+    ship_objs = []
 
     pygame.init()
     
