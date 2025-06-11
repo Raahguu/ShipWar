@@ -4,7 +4,7 @@
 
 ## W.I.P.
 
-This is a project I am working on to make a pygame recreation of a navy game, where you attmpt to blindly guess where on a grid the opponent has placed there ships, sending missles to these areas in an attempt to blow up all their ships before they can blow up all of yours. I am currently attempting to make this with `pygame` for the client side, and a `Websocket` server housed in a `docker` container, or just normally on your computer. This by default hosts on port `6363`
+This is a project I am working on to make a pygame recreation of a navy game, where you attmpt to blindly guess where on a grid the opponent has placed there ships, sending missiles to these areas in an attempt to blow up all their ships before they can blow up all of yours. I am currently attempting to make this with `pygame` for the client side, and a `Websocket` server housed in a `docker` container, or just normally on your computer. This by default hosts on port `6363`
 
 ## Installation
 

@@ -289,7 +289,7 @@ async def place_pieces() -> None:
 
         __SCREEN.fill("black")
 
-        setup_grid((0, 0), "Your Board", True, padding=padding_calc())
+        grid_buttons = setup_grid((0, 0), "Your Board", True, padding=padding_calc())
 
         pygame.draw.line(__SCREEN, "white", dividing_line_start_point_calc(), dividing_line_end_point_calc(), 1)
 
@@ -308,11 +308,18 @@ async def place_pieces() -> None:
         battleship_ship.cell_size = ship_cell_size                
         carrier_ship.cell_size = ship_cell_size                                                
         
+        ship_grid_origin = grid_buttons[0][0][0].rect.topleft
+        destroyer_ship.grid_origin = ship_grid_origin
+        submarine_ship.grid_origin = ship_grid_origin
+        cruiser_ship.grid_origin = ship_grid_origin
+        battleship_ship.grid_origin = ship_grid_origin
+        carrier_ship.grid_origin = ship_grid_origin
+
         destroyer_ship.draw()
         submarine_ship.draw()
         cruiser_ship.draw()
         battleship_ship.draw()                
-        carrier_ship.draw()                                                
+        carrier_ship.draw()
         
 
         pygame.display.flip()

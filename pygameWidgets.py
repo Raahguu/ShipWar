@@ -662,13 +662,15 @@ class EntryField(Widget):
 
 class Ship(Widget):
     def __init__(self, screen : pygame.surface, top_left : list[int, int], cell_size : int, 
-                 dimensions : list[int, int], alive_color : list[int, int, int] = "blue", dead_color : list[int, int, int] = "grey"):
+                 dimensions : list[int, int], alive_color : list[int, int, int] = "blue", dead_color : list[int, int, int] = "grey",
+                 grid_origin : list[int, int] = [0, 0]):
         self.screen = screen
         self.top_left = top_left
         self.cell_size = cell_size
         self.dimensions = dimensions
         self.alive_color = alive_color
         self.dead_color = dead_color
+        self.grid_origin = grid_origin
 
         self.being_held = False
         self.alive = True
@@ -706,7 +708,12 @@ class Ship(Widget):
             return False
 
         self.being_held = not self.being_held
-        if not self.being_held: self.__mouse_left_top_diff = None
+        if not self.being_held: 
+            self.__mouse_left_top_diff = None
+            snapped_x = round((self.top_left[0] - self.grid_origin[0]) / self.cell_size) * self.cell_size + self.grid_origin[0]
+            snapped_y = round((self.top_left[1] - self.grid_origin[1]) / self.cell_size) * self.cell_size + self.grid_origin[1]
+            self.top_left = [snapped_x, snapped_y]
+
         return True
 
     def drag(self, mouse_pos : tuple[int, int]):
