@@ -62,7 +62,7 @@ async def handle_server():
             curr_ship_locations : list[list[int, int]] = []
             for col in ship.blocks:
                 for block in col:
-                    cell_numbers = [(block.topleft[0] - ship.grid_origin[0]) / ship.cell_size, (block.topleft[1] - ship.grid_origin[1]) / ship.cell_size]
+                    cell_numbers = [ (block.topleft[1] - ship.grid_origin[1]) / ship.cell_size, (block.topleft[0] - ship.grid_origin[0]) / ship.cell_size]
                     curr_ship_locations.append(cell_numbers)
             message.append(curr_ship_locations)
         await ws_connection.send(json.dumps({"type":"ships", "message": message}))

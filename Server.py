@@ -13,7 +13,7 @@ def guess_result(reply : dict, index : int) -> int:
     opponents_ships = players_ships[1 - index]
     for ship_locations in opponents_ships:
         for location in ship_locations:
-            if location[::-1] == reply["position"]: return 2 # the result was a hit
+            if location == reply["position"]: return 2 # the result was a hit
     return 1
 
 
