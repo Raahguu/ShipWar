@@ -13,15 +13,34 @@ def guess_result(reply : dict, index : int) -> int:
     opponents_ships = players_ships[1 - index]
     for ship_locations in opponents_ships:
         for location in ship_locations:
-            if location == reply["position"]: return 2 # the result was a hit
+            if location[:2] == reply["position"]: 
+                location[-1] = 1
+                return 2 # the result was a hit
     return 1
 
+def check_for_sinking(index : int) -> list[list[int, int]] | None:
+    global players_ships
+    opponents_ships = players_ships[1 - index]
+    for ship in opponents_ships:
+        if sum([location[2] for location in ship]) == len(ship):
+            players_ships[1 - index].remove(ship)
+            return ship
+    
+async def send_guess_result(socket : websockets.asyncio.server.ServerConnection, other_socket : websockets.asyncio.server.ServerConnection, position : list[int, int], result : int):
+    await socket.send(json.dumps({"type": "guess_result", "position": [int(i) for i in position], "result": result}))
+    if other_socket != None:
+        await other_socket.send(json.dumps({"type": "enemy_guess_result", "position": [int(i) for i in position], "result": result}))
 
 def ship_handling(index : int, reply : dict):
     if reply["type"] != "ships": return False
 
     global players_ships
-    players_ships[index] = reply["message"]
+    reply_with_hit_record = []
+    for ship in reply["message"]:
+        for location in ship:
+            location.append(0)
+        reply_with_hit_record.append(ship)
+    players_ships[index] = reply_with_hit_record
 
 async def disconnect(player_id : int):
     global players
@@ -64,9 +83,13 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
                 ship_handling(player_id, reply)
             elif reply["type"] == "guess":
                 result = guess_result(reply, player_id)
-                await socket.send(json.dumps({"type": "guess_result", "position": reply["position"], "result": result}))
-                if other_socket != None:
-                    await other_socket.send(json.dumps({"type": "enemy_guess_result", "position": reply["position"], "result": result}))
+                if result == 2: 
+                    sinking = check_for_sinking(player_id)
+                    if sinking != None:
+                        for i in sinking:
+                            await send_guess_result(socket, other_socket, i[:2], 3)
+                        continue
+                await send_guess_result(socket, other_socket, reply["position"], result)
             elif reply["type"] == "disconnection":
                 await disconnect(player_id)
                 return
