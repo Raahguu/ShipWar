@@ -25,8 +25,12 @@ async def listen_to_server(socket: websockets.ClientConnection) -> None:
                 user_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
             elif reply["type"] == "enemy_guess_result":
                 enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+            elif reply["type"] == "done":
+                if reply["result"] == 1: error_message = "w"
+                else: error_message = "l"
+                return
             elif reply["type"] == "disconnection":
-                error_message = "The other player disconnected"
+                if not error_message: error_message = "The other player disconnected"
                 return
             elif reply["type"] == "error":
                 error_message = reply["message"]
@@ -89,6 +93,72 @@ async def handle_server():
     await ws_connection.send(json.dumps({"type":"disconnection"}))
     await ws_connection.close()
     still_playing.clear()
+
+def display_win_message(screen : pygame.Surface) -> None:
+    win_text = pygameWidgets.Text(screen, "You Won!!!", [0, 0], "green", font_size=48)
+    ok_button = pygameWidgets.Button(screen, "OK", 20, [0, 0])
+
+    while True:
+        screen.fill("black")
+        screen_height = screen.get_height()
+        screen_width = screen.get_width()
+        border = pygame.Rect(int(screen_width * 0.1), int(screen_height * 0.1), int(screen_width * 0.8), int(screen_height * 0.8))
+        pygame.draw.rect(screen, "red", border, 1)
+
+        #win text
+        win_text.center = [int(screen_width * 0.5), int(screen_height * 0.5)]
+        win_text.padding = int(screen_height * 0.2)
+        win_text.draw()
+
+        #OK button
+        ok_button._block_calcs = True
+        ok_button.padding = int(screen_height * 0.025)
+        ok_button._block_calcs = False
+        ok_button.center = [win_text.center[0], win_text.center[1] + win_text.padding[0]]
+        ok_button.draw()
+
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if ok_button.pressed(event.pos): 
+                    pygame.quit()
+                    return
+                
+def display_lose_message(screen : pygame.Surface) -> None:
+    lose_text = pygameWidgets.Text(screen, "You Lost.", [0, 0], "green", font_size=48)
+    ok_button = pygameWidgets.Button(screen, "OK", 20, [0, 0])
+
+    while True:
+        screen.fill("black")
+        screen_height = screen.get_height()
+        screen_width = screen.get_width()
+        border = pygame.Rect(int(screen_width * 0.1), int(screen_height * 0.1), int(screen_width * 0.8), int(screen_height * 0.8))
+        pygame.draw.rect(screen, "red", border, 1)
+
+        #lose text
+        lose_text.center = [int(screen_width * 0.5), int(screen_height * 0.5)]
+        lose_text.padding = int(screen_height * 0.2)
+        lose_text.draw()
+
+        #OK button
+        ok_button._block_calcs = True
+        ok_button.padding = int(screen_height * 0.025)
+        ok_button._block_calcs = False
+        ok_button.center = [lose_text.center[0], lose_text.center[1] + lose_text.padding[0]]
+        ok_button.draw()
+
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if ok_button.pressed(event.pos): 
+                    pygame.quit()
+                    return
 
 def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameWidgets.Button, list[list[pygameWidgets.Button]]]:
     global enemy_name
@@ -577,5 +647,8 @@ if __name__ == "__main__":
     pygameWidgets.SCREEN = __SCREEN
 
     main()
-    if error_message: pygameWidgets.display_error_box(__SCREEN, error_message)
+    if error_message: 
+        if error_message == "w": display_win_message(__SCREEN)
+        elif error_message == "l": display_lose_message(__SCREEN)
+        else: pygameWidgets.display_error_box(__SCREEN, error_message)
     pygame.quit()

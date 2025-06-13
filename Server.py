@@ -53,12 +53,14 @@ async def disconnect(player_id : int):
     players[player_id] = None
     connected_clients = []
 
-    global players_ships, game_result
+    global players_ships
     players_ships = [None, None]
-    game_result = [None, None]
+
+    global game_over
+    game_over = False
 
 async def client_listner(socket: websockets.asyncio.server.ServerConnection):
-    global connected_clients, players
+    global connected_clients, players, players_ships, game_over
     player_id = connected_clients.index(socket)
     try:
         other_socket = connected_clients[1 - player_id]
@@ -74,7 +76,6 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
             if reply["type"] == "username":
                 players[player_id] = reply["name"]
                 print(f"{reply["name"]} joined")
-                print(players)
                 if players[1 - player_id] != None:
                     await socket.send(json.dumps({"type": "username", "name": players[1 - player_id]}))
                     if other_socket != None:
@@ -91,6 +92,7 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
                         continue
                 await send_guess_result(socket, other_socket, reply["position"], result)
             elif reply["type"] == "disconnection":
+                if game_over: return
                 await disconnect(player_id)
                 return
             elif reply["type"] == "error":
@@ -112,6 +114,7 @@ async def client_listner(socket: websockets.asyncio.server.ServerConnection):
 async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     global connected_clients
     global players
+    global players_ships
 
     #Check the number of players isn't already too many
     if len(connected_clients) >= MAX_PLAYERS:
@@ -125,15 +128,19 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
     await socket.send(json.dumps({"type": "welcome", "player": player_id}))
 
     asyncio.create_task(client_listner(socket))
-    while socket in connected_clients and game_result == [None, None]: await asyncio.sleep(1) 
-    if game_result != [None, None]: await socket.send(json.dumps({"type": "done", "result": game_result[player_id - 1]}))
+    while socket in connected_clients and None in players_ships: await asyncio.sleep(1)
+    print("!!! 'players_ships' does not contain None !!!")
+    while socket in connected_clients and players_ships[0] != [] and players_ships[1] != []: await asyncio.sleep(1)
+    print("Checking who won")
+    print(players_ships)
+    if players_ships[player_id - 1] == []: await socket.send(json.dumps({"type": "done", "result": 0})); print("Lost message")
+    if players_ships[2 - player_id] == []: await socket.send(json.dumps({"type": "done", "result": 1})); print("Win message")
 
 async def start_server(port : int):
     if type(port) != int: raise TypeError(f"You must supply a an integer port number, not: {port}")
     print("Server up")
     async with websockets.asyncio.server.serve(handle_client, "localhost", port) as server:
         await server.serve_forever()
-                
 
 if __name__ == "__main__":
     DEFAULT_PORT = 6363
@@ -144,8 +151,8 @@ if __name__ == "__main__":
     players : list = [None, None]
     global players_ships
     players_ships : list[list[list[list[int, int]]]] = [None, None]
-    global game_result
-    game_result = [None, None]
+    global game_over
+    game_over = False
 
     try:
         if sys.argv[1] != "Docker": 1/0

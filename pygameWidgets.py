@@ -137,7 +137,7 @@ class Text(Widget):
     def padding(self, value : list[int, int] | int):
         if type(value) not in [list, tuple, int]: raise TypeError(f"The text padding must be either a list, a tuple, or an int, not a {type(value)}")
         if type(value) in [list, tuple] and len(value) != 2: raise TypeError(f"The text padding must have a length of 2")
-        if type(value) == int: value = [int(value), int(value)]
+        if type(value) == int: value = [value, value]
         self.__padding = list(value)
 
     def _calc_surface(self):
@@ -488,7 +488,6 @@ class Button(Widget):
         self.rect.center = (self.center[0], self.center[1])
 
     def draw(self) -> None:
-        self._calc_rect()
         pygame.draw.rect(self.screen, self.color, self.rect)
         if self.have_border: pygame.draw.rect(self.screen, self.bordor_color, self.rect, 1)
         self.text.draw()
