@@ -223,7 +223,6 @@ def setup_grid(LEFT_TOP, title="", label=False, font_size : int = 24, padding=0,
 
     inverted_scaled_cell_size = get_inverse_scaled_size(CELL_SIZE)
 
-
     # Grid buttons and pegs
     for row in range(GRID_SIZE):
         for col in range(GRID_SIZE):
@@ -354,8 +353,20 @@ def send_ship_locations(ship_2 : pygameWidgets.Ship, ship_3a : pygameWidgets.Shi
 
     return True
 
-def validate_ship_positions(ships : pygameWidgets.Ship) -> bool:
-    #TODO: Some input validation to ensure that all the ships locations are valid/on the board
+def validate_ship_positions(ships : list[pygameWidgets.Ship]) -> bool:
+    #Some input validation to ensure that all the ships locations are valid/on the board
+    global GRID_SIZE
+    def to_grid_location(ship : pygameWidgets.Ship, i : int, y_not_x = False):
+        e = (i - ship.grid_origin[y_not_x]) / ship.cell_size
+        print(e)
+        return int(e)
+
+    for ship in ships:
+        ship._calc_rect()
+        if (to_grid_location(ship, ship.border_rect.left) < 0 or to_grid_location(ship, ship.border_rect.top, 1) < 0 or
+            to_grid_location(ship, ship.border_rect.left) + abs(ship.dimensions[0]) - 1 > GRID_SIZE - 1 or
+            to_grid_location(ship, ship.border_rect.top, 1) + abs(ship.dimensions[1]) - 1 > GRID_SIZE - 1):
+            return False
     return True
 
 async def place_pieces() -> None:

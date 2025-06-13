@@ -131,7 +131,6 @@ async def handle_client(socket : websockets.asyncio.server.ServerConnection):
 
     asyncio.create_task(client_listner(socket))
     while socket in connected_clients and None in players_ships: await asyncio.sleep(1)
-    print("!!! 'players_ships' does not contain None !!!")
     while socket in connected_clients and players_ships[0] != [] and players_ships[1] != []: await asyncio.sleep(1)
     game_over += 1
     if players_ships[player_id - 1] == []: await socket.send(json.dumps({"type": "done", "result": 0})); print("Lost message")
