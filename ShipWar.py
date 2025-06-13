@@ -280,7 +280,7 @@ def draw_menu() -> tuple[pygameWidgets.Button, pygameWidgets.Button, pygameWidge
 
     return play_button, settings_button, quit_button
 
-def draw_settings_menu(player_name_entry_field : pygameWidgets.EntryField) -> tuple[pygameWidgets.EntryField, pygameWidgets.Button, pygameWidgets.Button, pygameWidgets.Button]:
+def draw_settings_menu(player_name_entry_field : pygameWidgets.EntryField) -> tuple[pygameWidgets.EntryField, pygameWidgets.Button, pygameWidgets.Button]:
     global __SCREEN
 
     __SCREEN.fill("black")
@@ -303,20 +303,17 @@ def draw_settings_menu(player_name_entry_field : pygameWidgets.EntryField) -> tu
     button_button_x_dist =  pygameWidgets.get_scaled_size(40)
     button_width = pygameWidgets.get_scaled_size(250)
 
-    default_button = pygameWidgets.Button(__SCREEN, "Default", (button_width, button_padding), 
-                              ((__SCREEN.get_width() - button_width - button_button_x_dist) // 2, player_name_entry_field.center[1] + player_name_entry_field.rect.height + entry_button_dist), 
-                              fixed_width=True, color="blue", font_size=24)
     save_button = pygameWidgets.Button(__SCREEN, "Save", (button_width, button_padding), 
-                                  ((__SCREEN.get_width() + button_width + button_button_x_dist) // 2, default_button.center[1]), 
+                                  (__SCREEN.get_width() // 2, player_name_entry_field.center[1] + player_name_entry_field.rect.height + entry_button_dist), 
                                   fixed_width=True, color="blue", font_size=24)
     back_button = pygameWidgets.Button(__SCREEN, "Back", (button_width, button_padding), 
                               (__SCREEN.get_width() // 2, save_button.center[1] + button_padding + button_button_y_dist), 
                               fixed_width=True, color="blue", font_size=24)
-    default_button.draw()
+
     save_button.draw()
     back_button.draw()
 
-    return player_name_entry_field, default_button, save_button, back_button
+    return player_name_entry_field, save_button, back_button
 
 def settings() -> None:
     global error_message
@@ -325,7 +322,7 @@ def settings() -> None:
     player_name_entry_field = pygameWidgets.EntryField(__SCREEN, (0, 0), "Player Name: ", font_size=26, title_field_dist=20, input_padding=20, width=250, input_text=player_name)
     
     while not error_message:
-        player_name_entry_field, default_button, save_button, back_button = draw_settings_menu(player_name_entry_field)
+        player_name_entry_field, save_button, back_button = draw_settings_menu(player_name_entry_field)
         pygame.display.flip()
 
         for event in pygame.event.get():
@@ -336,8 +333,7 @@ def settings() -> None:
                 #Entry Fields
                 player_name_entry_field.pressed(event.pos)
                 #Buttons
-                if default_button.pressed(event.pos): pass #TODO: have the default button actually do something, or get rid of it
-                elif save_button.pressed(event.pos):
+                if save_button.pressed(event.pos):
                     player_name = player_name_entry_field.input.inner_text
                 elif back_button.pressed(event.pos): return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: return
@@ -585,7 +581,6 @@ def get_server_info():
                 port_input.pressed(event.pos)
                 #Buttons
                 if confirm_button.pressed(event.pos): 
-                    #TODO: Input validation
                     server_ip = ip_input.input.inner_text
                     server_port = port_input.input.inner_text
                     asyncio.run(game())
