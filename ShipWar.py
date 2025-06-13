@@ -11,20 +11,23 @@ def get_cell_size(screen : pygame.Surface, padding : int):
     return int(min(screen.get_width() / 2 - 2 * padding, screen.get_height() - 4 * padding) // GRID_SIZE)
 
 async def listen_to_server(socket: websockets.ClientConnection) -> None:
-    global error_message, user_guessed_squares, enemy_guessed_squares, player_id, enemy_name, still_playing
+    global error_message, user_guessed_squares, enemy_guessed_squares, player_id, enemy_name, still_playing, players_turn
     while still_playing:
         try:
             reply = json.loads(await socket.recv())
             print("Received:", reply)
             if reply["type"] == "welcome":
                 player_id = int(reply["player"])
+                if player_id != 1: players_turn = False
             elif reply["type"] == "username":
                 enemy_name = reply["name"]
                 still_playing.set()
             elif reply["type"] == "guess_result":
                 user_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+                players_turn = False
             elif reply["type"] == "enemy_guess_result":
                 enemy_guessed_squares[reply["position"][0]][reply["position"][1]] = reply["result"]
+                players_turn = True
             elif reply["type"] == "done":
                 if reply["result"] == 1: error_message = "w"
                 else: error_message = "l"
@@ -182,7 +185,7 @@ def setup_game_board(padding) -> tuple[list[list[pygameWidgets.Button]], pygameW
 
     return radar_buttons, guess_button, enemy_buttons
 
-def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_button : pygameWidgets.Button = None, guessed=None):
+def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_button : pygameWidgets.Button = None, guessed=None, allowed_to_guess = False):
     can_guess = False
     circle_radius = get_cell_size(__SCREEN, padding) // 8
     for row in range(GRID_SIZE):
@@ -198,7 +201,7 @@ def draw_grid(buttons : list[list[pygameWidgets.Button]], padding : int, guess_b
                     case 4: pygame.gfxdraw.filled_circle(__SCREEN, cx, cy, circle_radius, (0, 0, 255)); can_guess = True # blue for the one the player is currently going to guess
     
     if guess_button:
-        guess_button.color = "blue" if can_guess else "grey"
+        guess_button.color = "blue" if can_guess and allowed_to_guess else "grey"
         guess_button.draw()
 
 def setup_grid(LEFT_TOP, title="", label=False, font_size : int = 24, padding=0, 
@@ -456,6 +459,7 @@ async def game() -> None:
     global guess
     global error_message
     global still_playing
+    global players_turn
     last_guess = []
 
     global GRID_SIZE
@@ -486,7 +490,7 @@ async def game() -> None:
         await asyncio.sleep(1/60)
 
         #update boards
-        draw_grid(radar_buttons, pygameWidgets.get_scaled_size(50), guess_button, user_guessed_squares)
+        draw_grid(radar_buttons, pygameWidgets.get_scaled_size(50), guess_button, user_guessed_squares, allowed_to_guess=players_turn)
         draw_grid(enemy_buttons, pygameWidgets.get_scaled_size(50), guessed=enemy_guessed_squares)
 
         # Update the display
@@ -514,7 +518,7 @@ async def game() -> None:
                             if last_guess and user_guessed_squares[last_guess[0]][last_guess[1]] == 4: user_guessed_squares[last_guess[0]][last_guess[1]] = 0
                             last_guess = [row, col]
                             user_guessed_squares[row][col] = 4
-                if last_guess and guess_button.pressed(event.pos):
+                if last_guess and guess_button.pressed(event.pos) and players_turn:
                     guess = [last_guess[0], last_guess[1]]
                     await asyncio.sleep(0)
             elif event.type == pygame.KEYDOWN:
@@ -639,6 +643,9 @@ if __name__ == "__main__":
 
     global ship_objs
     ship_objs = []
+
+    global players_turn
+    players_turn = True
 
     pygame.init()
     
